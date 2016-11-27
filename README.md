@@ -9,7 +9,7 @@ Name
 Synopsis
 --------
 
-<INCLUDE> PROVIDES - lists the programs and functions provided by `lofasmio`
+<INCLUDE> PROVIDES.md - lists the programs and functions provided by `lofasmio`
 
 Description
 -----------
@@ -22,7 +22,7 @@ analysis programs that may serve as examples.
 
 ### Installing
 
-<INCLUDE> INSTALL - gives installation instructions
+<INCLUDE> INSTALL.md - gives installation instructions
 
 
 ### Documentation
@@ -45,9 +45,9 @@ Program documentation can also be viewed with _prog_ `-H`.
 
 ### Copying
 
-<INCLUDE> COPYING - gives copyright information
+<INCLUDE> COPYING.md - gives copyright information
 
 
 ### Contributing
 
-<INCLUDE> CONTRIBUTING - gives basic `lofasmio` coding guidelines
+<INCLUDE> CONTRIBUTING.md - gives basic `lofasmio` coding guidelines

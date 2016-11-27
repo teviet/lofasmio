@@ -39,8 +39,8 @@ LIBS = liblofasmio.a($(OBJS))
 PROGS = lfslice lfchop lfcat lftest bxresample lftype lfplot2d lfstats \
 	lfmed lfmean lfplot
 ALLPROGS = md2man $(PROGS)
-DISTFILES = Makefile README INSTALL CONTRIBUTING COPYING LICENSE VERSION \
-	formats.md $(ALLHEADERS) $(ALLOBJS:.o=.c) $(ALLPROGS:=.c)
+DISTFILES = Makefile README.md INSTALL.md CONTRIBUTING.md COPYING.md LICENSE \
+	VERSION formats.md $(ALLHEADERS) $(ALLOBJS:.o=.c) $(ALLPROGS:=.c)
 DATAFILES = 20160619_000326_AA.bbx.gz 20160619_000828_AA.bbx.gz
 DATAUNZIP = $(DATAFILES:.gz=)
 DIST = lofasmio-$(VERSION)
@@ -52,24 +52,24 @@ $(ALLOBJS): $(ALLHEADERS)
 lib: $(LIBS)
 
 # A more elaborate rule for the package to generate its own documentation.
-man: $(DISTFILES) PROVIDES
+man: $(DISTFILES) PROVIDES.md
 	mkdir -p doc
 	./md2man -odoc formats.md
 	./md2man -b"<MARKDOWN>" -e"</MARKDOWN>" -i"<INCLUDE>" -odoc *.c *.h
 	for file in $(PROGS); do ./$$file --manpage > doc/$$file.1; done
-PROVIDES: $(PROGS) $(HEADERS) $(OBJS:.o=.c)
-	-rm PROVIDES
-	echo -e "### Programs:\n" >> PROVIDES
+PROVIDES.md: $(PROGS) $(HEADERS) $(OBJS:.o=.c)
+	-rm PROVIDES.md
+	echo -e "### Programs:\n" >> PROVIDES.md
 	for file in $(PROGS); \
 		do ./$$file --markdown | \
 		awk 'c&&!--c{print $$0 "  "};/^## NAME/{c=2}' \
-			>> PROVIDES; done
+			>> PROVIDES.md; done
 	for file in $(HEADERS) $(OBJS:.o=.c); \
 		do echo -e "\n### From " $$file":\n" \
-			>> PROVIDES; \
+			>> PROVIDES.md; \
 		awk -e '/^<\/MARKDOWN>/{f=0};f&&c&&!--c{print $$0 "  "};' \
 			-e '/^## NAME/{f&&c=2};/^<MARKDOWN>/{f=1}' $$file \
-			>> PROVIDES; done
+			>> PROVIDES.md; done
 
 # Simple test pipelines for ZLIB and non-ZLIB versions
 check: $(PROGS)
@@ -98,5 +98,5 @@ $(DIST).tar.gz: $(DISTFILES) $(DATAFILES:%=testdata/%)
 	tar -czf $(DIST).tar.gz $(DIST)
 	-rm -rf $(DIST)
 distclean:
-	rm -f $(ALLOBJS) $(ALLPROGS) PROVIDES liblofasmio.a testplot.eps
+	rm -f $(ALLOBJS) $(ALLPROGS) PROVIDES.md liblofasmio.a testplot.eps
 	rm -rf doc

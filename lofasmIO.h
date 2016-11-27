@@ -36,7 +36,7 @@ extern "C" {
 
 /*
 <MARKDOWN>
-<INCLUDE> README - gives an introduction to the lofasmio package
+<INCLUDE> README.md - gives an introduction to the lofasmio package
 
 ### Programs
 
