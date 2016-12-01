@@ -19,8 +19,8 @@ ZLIB = yes
 # and will normally not require modification.
 
 # Standard options.
-VERSION ::= $(shell cat VERSION)
-LFB_VERSION ::= $(word 1,$(subst ., ,$(VERSION)))
+VERSION = `cat VERSION`
+LFB_VERSION = `version=\`cat VERSION\`;echo $${version%%.*}`
 CC = gcc
 LDLIBS = -lm
 CFLAGS = -g -Wall -O3 -DVERSION="\"$(VERSION)\"" -DLFB_VERSION=$(LFB_VERSION)
