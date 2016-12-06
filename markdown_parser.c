@@ -403,7 +403,7 @@ static int notenumber = 0;  /* Number of footnote. */
 /* pad - add newlines if needed */
 static void pad(charvector *out, int num) {
     while (num-- > padded)
-        charvector_append_printf(out, "\n");;
+        charvector_append(out, "\n");;
     padded = num;
 }
 
@@ -438,16 +438,16 @@ static void print_html_string(charvector *out, char *str, bool obfuscate) {
     while (*str != '\0') {
         switch (*str) {
         case '&':
-            charvector_append_printf(out, "&amp;");
+            charvector_append(out, "&amp;");
             break;
         case '<':
-            charvector_append_printf(out, "&lt;");
+            charvector_append(out, "&lt;");
             break;
         case '>':
-            charvector_append_printf(out, "&gt;");
+            charvector_append(out, "&gt;");
             break;
         case '"':
-            charvector_append_printf(out, "&quot;");
+            charvector_append(out, "&quot;");
             break;
         default:
 	  if (obfuscate && ((int) *str >= 0)){
@@ -486,37 +486,37 @@ static void print_html_element(charvector *out, element *elt, bool obfuscate) {
         charvector_append_printf(out, "%s", elt->contents.str);
         break;
     case LINEBREAK:
-        charvector_append_printf(out, "<br/>\n");
+        charvector_append(out, "<br/>\n");
         break;
     case STR:
         print_html_string(out, elt->contents.str, obfuscate);
         break;
     case ELLIPSIS:
-        charvector_append_printf(out, "&hellip;");
+        charvector_append(out, "&hellip;");
         break;
     case EMDASH:
-        charvector_append_printf(out, "&mdash;");
+        charvector_append(out, "&mdash;");
         break;
     case ENDASH:
-        charvector_append_printf(out, "&ndash;");
+        charvector_append(out, "&ndash;");
         break;
     case APOSTROPHE:
-        charvector_append_printf(out, "&rsquo;");
+        charvector_append(out, "&rsquo;");
         break;
     case SINGLEQUOTED:
-        charvector_append_printf(out, "&lsquo;");
+        charvector_append(out, "&lsquo;");
         print_html_element_list(out, elt->children, obfuscate);
-        charvector_append_printf(out, "&rsquo;");
+        charvector_append(out, "&rsquo;");
         break;
     case DOUBLEQUOTED:
-        charvector_append_printf(out, "&ldquo;");
+        charvector_append(out, "&ldquo;");
         print_html_element_list(out, elt->children, obfuscate);
-        charvector_append_printf(out, "&rdquo;");
+        charvector_append(out, "&rdquo;");
         break;
     case CODE:
-        charvector_append_printf(out, "<code>");
+        charvector_append(out, "<code>");
         print_html_string(out, elt->contents.str, obfuscate);
-        charvector_append_printf(out, "</code>");
+        charvector_append(out, "</code>");
         break;
     case HTML:
         charvector_append_printf(out, "%s", elt->contents.str);
@@ -524,45 +524,45 @@ static void print_html_element(charvector *out, element *elt, bool obfuscate) {
     case LINK:
         if (strstr(elt->contents.link->url, "mailto:") == elt->contents.link->url)
             obfuscate = true;  /* obfuscate mailto: links */
-        charvector_append_printf(out, "<a href=\"");
+        charvector_append(out, "<a href=\"");
         print_html_string(out, elt->contents.link->url, obfuscate);
-        charvector_append_printf(out, "\"");
+        charvector_append(out, "\"");
         if (strlen(elt->contents.link->title) > 0) {
-            charvector_append_printf(out, " title=\"");
+            charvector_append(out, " title=\"");
             print_html_string(out, elt->contents.link->title, obfuscate);
-            charvector_append_printf(out, "\"");
+            charvector_append(out, "\"");
         }
-        charvector_append_printf(out, ">");
+        charvector_append(out, ">");
         print_html_element_list(out, elt->contents.link->label, obfuscate);
-        charvector_append_printf(out, "</a>");
+        charvector_append(out, "</a>");
         break;
     case IMAGE:
-        charvector_append_printf(out, "<img src=\"");
+        charvector_append(out, "<img src=\"");
         print_html_string(out, elt->contents.link->url, obfuscate);
-        charvector_append_printf(out, "\" alt=\"");
+        charvector_append(out, "\" alt=\"");
         print_html_element_list(out, elt->contents.link->label, obfuscate);
-        charvector_append_printf(out, "\"");
+        charvector_append(out, "\"");
         if (strlen(elt->contents.link->title) > 0) {
-            charvector_append_printf(out, " title=\"");
+            charvector_append(out, " title=\"");
             print_html_string(out, elt->contents.link->title, obfuscate);
-            charvector_append_printf(out, "\"");
+            charvector_append(out, "\"");
         }
-        charvector_append_printf(out, " />");
+        charvector_append(out, " />");
         break;
     case EMPH:
-        charvector_append_printf(out, "<em>");
+        charvector_append(out, "<em>");
         print_html_element_list(out, elt->children, obfuscate);
-        charvector_append_printf(out, "</em>");
+        charvector_append(out, "</em>");
         break;
     case STRONG:
-        charvector_append_printf(out, "<strong>");
+        charvector_append(out, "<strong>");
         print_html_element_list(out, elt->children, obfuscate);
-        charvector_append_printf(out, "</strong>");
+        charvector_append(out, "</strong>");
         break;
     case STRIKE:
-        charvector_append_printf(out, "<del>");
+        charvector_append(out, "<del>");
         print_html_element_list(out, elt->children, obfuscate);
-        charvector_append_printf(out, "</del>");
+        charvector_append(out, "</del>");
         break;
     case LIST:
         print_html_element_list(out, elt->children, obfuscate);
@@ -586,14 +586,14 @@ static void print_html_element(charvector *out, element *elt, bool obfuscate) {
         break;
     case PARA:
         pad(out, 2);
-        charvector_append_printf(out, "<p>");
+        charvector_append(out, "<p>");
         print_html_element_list(out, elt->children, obfuscate);
-        charvector_append_printf(out, "</p>");
+        charvector_append(out, "</p>");
         padded = 0;
         break;
     case HRULE:
         pad(out, 2);
-        charvector_append_printf(out, "<hr />");
+        charvector_append(out, "<hr />");
         padded = 0;
         break;
     case HTMLBLOCK:
@@ -623,24 +623,24 @@ static void print_html_element(charvector *out, element *elt, bool obfuscate) {
         padded = 0;
         print_html_element_list(out, elt->children, obfuscate);
         pad(out, 1);
-        charvector_append_printf(out, "</ol>");
+        charvector_append(out, "</ol>");
         padded = 0;
         break;
     case LISTITEM:
         pad(out, 1);
-        charvector_append_printf(out, "<li>");
+        charvector_append(out, "<li>");
         padded = 2;
         print_html_element_list(out, elt->children, obfuscate);
-        charvector_append_printf(out, "</li>");
+        charvector_append(out, "</li>");
         padded = 0;
         break;
     case BLOCKQUOTE:
         pad(out, 2);
-        charvector_append_printf(out, "<blockquote>\n");
+        charvector_append(out, "<blockquote>\n");
         padded = 2;
         print_html_element_list(out, elt->children, obfuscate);
         pad(out, 1);
-        charvector_append_printf(out, "</blockquote>");
+        charvector_append(out, "</blockquote>");
         padded = 0;
         break;
     case REFERENCE:
@@ -669,7 +669,7 @@ static void print_html_endnotes(charvector *out) {
     if (endnotes == NULL) 
         return;
     note = reverse(endnotes);
-    charvector_append_printf(out, "<hr/>\n<ol id=\"notes\">");
+    charvector_append(out, "<hr/>\n<ol id=\"notes\">");
     while (note != NULL) {
         note_elt = note->children;
         counter++;
@@ -679,11 +679,11 @@ static void print_html_endnotes(charvector *out) {
         print_html_element_list(out, note_elt->children, false);
         charvector_append_printf(out, " <a href=\"#fnref%d\" title=\"Jump back to reference\">[back]</a>", counter);
         pad(out, 1);
-        charvector_append_printf(out, "</li>");
+        charvector_append(out, "</li>");
         note = note->next;
     }
     pad(out, 1);
-    charvector_append_printf(out, "</ol>");
+    charvector_append(out, "</ol>");
     free_element_list(endnotes);
 }
 
@@ -702,22 +702,22 @@ static void print_latex_string(charvector *out, char *str) {
             charvector_append_printf(out, "\\%c", *str);
             break;
         case '^':
-            charvector_append_printf(out, "\\^{}");
+            charvector_append(out, "\\^{}");
             break;
         case '\\':
-            charvector_append_printf(out, "\\textbackslash{}");
+            charvector_append(out, "\\textbackslash{}");
             break;
         case '~':
-            charvector_append_printf(out, "\\ensuremath{\\sim}");
+            charvector_append(out, "\\ensuremath{\\sim}");
             break;
         case '|':
-            charvector_append_printf(out, "\\textbar{}");
+            charvector_append(out, "\\textbar{}");
             break;
         case '<':
-            charvector_append_printf(out, "\\textless{}");
+            charvector_append(out, "\\textless{}");
             break;
         case '>':
-            charvector_append_printf(out, "\\textgreater{}");
+            charvector_append(out, "\\textgreater{}");
             break;
         default:
             charvector_append_c(out, *str);
@@ -743,37 +743,37 @@ static void print_latex_element(charvector *out, element *elt) {
         charvector_append_printf(out, "%s", elt->contents.str);
         break;
     case LINEBREAK:
-        charvector_append_printf(out, "\\\\\n");
+        charvector_append(out, "\\\\\n");
         break;
     case STR:
         print_latex_string(out, elt->contents.str);
         break;
     case ELLIPSIS:
-        charvector_append_printf(out, "\\ldots{}");
+        charvector_append(out, "\\ldots{}");
         break;
     case EMDASH: 
-        charvector_append_printf(out, "---");
+        charvector_append(out, "---");
         break;
     case ENDASH: 
-        charvector_append_printf(out, "--");
+        charvector_append(out, "--");
         break;
     case APOSTROPHE:
-        charvector_append_printf(out, "'");
+        charvector_append(out, "'");
         break;
     case SINGLEQUOTED:
-        charvector_append_printf(out, "`");
+        charvector_append(out, "`");
         print_latex_element_list(out, elt->children);
-        charvector_append_printf(out, "'");
+        charvector_append(out, "'");
         break;
     case DOUBLEQUOTED:
-        charvector_append_printf(out, "``");
+        charvector_append(out, "``");
         print_latex_element_list(out, elt->children);
-        charvector_append_printf(out, "''");
+        charvector_append(out, "''");
         break;
     case CODE:
-        charvector_append_printf(out, "\\texttt{");
+        charvector_append(out, "\\texttt{");
         print_latex_string(out, elt->contents.str);
-        charvector_append_printf(out, "}");
+        charvector_append(out, "}");
         break;
     case HTML:
         /* don't print HTML */
@@ -781,25 +781,25 @@ static void print_latex_element(charvector *out, element *elt) {
     case LINK:
         charvector_append_printf(out, "\\href{%s}{", elt->contents.link->url);
         print_latex_element_list(out, elt->contents.link->label);
-        charvector_append_printf(out, "}");
+        charvector_append(out, "}");
         break;
     case IMAGE:
         charvector_append_printf(out, "\\includegraphics{%s}", elt->contents.link->url);
         break;
     case EMPH:
-        charvector_append_printf(out, "\\emph{");
+        charvector_append(out, "\\emph{");
         print_latex_element_list(out, elt->children);
-        charvector_append_printf(out, "}");
+        charvector_append(out, "}");
         break;
     case STRONG:
-        charvector_append_printf(out, "\\textbf{");
+        charvector_append(out, "\\textbf{");
         print_latex_element_list(out, elt->children);
-        charvector_append_printf(out, "}");
+        charvector_append(out, "}");
         break;
     case STRIKE:
-        charvector_append_printf(out, "\\sout{");
+        charvector_append(out, "\\sout{");
         print_latex_element_list(out, elt->children);
-        charvector_append_printf(out, "}");
+        charvector_append(out, "}");
         break;
     case LIST:
         print_latex_element_list(out, elt->children);
@@ -811,19 +811,19 @@ static void print_latex_element(charvector *out, element *elt) {
     case H1: case H2: case H3:
         pad(out, 2);
         /* lev = elt->key - H1 + 1;  assumes H1 ... H6 are in order */
-        charvector_append_printf(out, "\\");
+        charvector_append(out, "\\");
         for (i = elt->key; i > H1; i--)
-            charvector_append_printf(out, "sub");
-        charvector_append_printf(out, "section{");
+            charvector_append(out, "sub");
+        charvector_append(out, "section{");
         print_latex_element_list(out, elt->children);
-        charvector_append_printf(out, "}");
+        charvector_append(out, "}");
         padded = 0;
         break;
     case H4: case H5: case H6:
         pad(out, 2);
-        charvector_append_printf(out, "\\noindent\\textbf{");
+        charvector_append(out, "\\noindent\\textbf{");
         print_latex_element_list(out, elt->children);
-        charvector_append_printf(out, "}");
+        charvector_append(out, "}");
         padded = 0;
         break;
     case PLAIN:
@@ -838,7 +838,7 @@ static void print_latex_element(charvector *out, element *elt) {
         break;
     case HRULE:
         pad(out, 2);
-        charvector_append_printf(out, "\\begin{center}\\rule{3in}{0.4pt}\\end{center}\n");
+        charvector_append(out, "\\begin{center}\\rule{3in}{0.4pt}\\end{center}\n");
         padded = 0;
         break;
     case HTMLBLOCK:
@@ -846,53 +846,53 @@ static void print_latex_element(charvector *out, element *elt) {
         break;
     case VERBATIM:
         pad(out, 1);
-        charvector_append_printf(out, "\\begin{verbatim}\n");
+        charvector_append(out, "\\begin{verbatim}\n");
         print_latex_string(out, elt->contents.str);
-        charvector_append_printf(out, "\n\\end{verbatim}");
+        charvector_append(out, "\n\\end{verbatim}");
         padded = 0;
         break;
     case BULLETLIST:
         pad(out, 1);
-        charvector_append_printf(out, "\\begin{itemize}");
+        charvector_append(out, "\\begin{itemize}");
         padded = 0;
         print_latex_element_list(out, elt->children);
         pad(out, 1);
-        charvector_append_printf(out, "\\end{itemize}");
+        charvector_append(out, "\\end{itemize}");
         padded = 0;
         break;
     case ORDEREDLIST:
         pad(out, 1);
-        charvector_append_printf(out, "\\begin{enumerate}");
+        charvector_append(out, "\\begin{enumerate}");
         padded = 0;
         print_latex_element_list(out, elt->children);
         pad(out, 1);
-        charvector_append_printf(out, "\\end{enumerate}");
+        charvector_append(out, "\\end{enumerate}");
         padded = 0;
         break;
     case LISTITEM:
         pad(out, 1);
-        charvector_append_printf(out, "\\item ");
+        charvector_append(out, "\\item ");
         padded = 2;
         print_latex_element_list(out, elt->children);
-        charvector_append_printf(out, "\n");
+        charvector_append(out, "\n");
         break;
     case BLOCKQUOTE:
         pad(out, 1);
-        charvector_append_printf(out, "\\begin{quote}");
+        charvector_append(out, "\\begin{quote}");
         padded = 0;
         print_latex_element_list(out, elt->children);
         pad(out, 1);
-        charvector_append_printf(out, "\\end{quote}");
+        charvector_append(out, "\\end{quote}");
         padded = 0;
         break;
     case NOTE:
         /* if contents.str == 0, then print note; else ignore, since this
          * is a note block that has been incorporated into the notes list */
         if (elt->contents.str == 0) {
-            charvector_append_printf(out, "\\footnote{");
+            charvector_append(out, "\\footnote{");
             padded = 2;
             print_latex_element_list(out, elt->children);
-            charvector_append_printf(out, "}");
+            charvector_append(out, "}");
             padded = 0; 
         }
         break;
@@ -917,14 +917,14 @@ static bool in_list_item = false; /* True if we're parsing contents of a list it
 static void print_groff_string(charvector *out, char *str) {
     /* escape dots if it is the first character */
     if (*str == '.') {
-        charvector_append_printf(out, "\\[char46]");
+        charvector_append(out, "\\[char46]");
         str++;
     }
 
     while (*str != '\0') {
         switch (*str) {
         case '\\':
-            charvector_append_printf(out, "\\e");
+            charvector_append(out, "\\e");
             break;
         default:
             charvector_append_c(out, *str);
@@ -953,7 +953,7 @@ static void print_groff_mm_element(charvector *out, element *elt, int count) {
         break;
     case LINEBREAK:
         pad(out, 1);
-        charvector_append_printf(out, ".br\n");
+        charvector_append(out, ".br\n");
         padded = 0;
         break;
     case STR:
@@ -961,31 +961,31 @@ static void print_groff_mm_element(charvector *out, element *elt, int count) {
         padded = 0;
         break;
     case ELLIPSIS:
-        charvector_append_printf(out, "...");
+        charvector_append(out, "...");
         break;
     case EMDASH:
-        charvector_append_printf(out, "\\[em]");
+        charvector_append(out, "\\[em]");
         break;
     case ENDASH:
-        charvector_append_printf(out, "\\[en]");
+        charvector_append(out, "\\[en]");
         break;
     case APOSTROPHE:
-        charvector_append_printf(out, "'");
+        charvector_append(out, "'");
         break;
     case SINGLEQUOTED:
-        charvector_append_printf(out, "`");
+        charvector_append(out, "`");
         print_groff_mm_element_list(out, elt->children);
-        charvector_append_printf(out, "'");
+        charvector_append(out, "'");
         break;
     case DOUBLEQUOTED:
-        charvector_append_printf(out, "\\[lq]");
+        charvector_append(out, "\\[lq]");
         print_groff_mm_element_list(out, elt->children);
-        charvector_append_printf(out, "\\[rq]");
+        charvector_append(out, "\\[rq]");
         break;
     case CODE:
-        charvector_append_printf(out, "\\fC");
+        charvector_append(out, "\\fC");
         print_groff_string(out, elt->contents.str);
-        charvector_append_printf(out, "\\fR");
+        charvector_append(out, "\\fR");
         padded = 0;
         break;
     case HTML:
@@ -997,28 +997,28 @@ static void print_groff_mm_element(charvector *out, element *elt, int count) {
         padded = 0;
         break;
     case IMAGE:
-        charvector_append_printf(out, "[IMAGE: ");
+        charvector_append(out, "[IMAGE: ");
         print_groff_mm_element_list(out, elt->contents.link->label);
-        charvector_append_printf(out, "]");
+        charvector_append(out, "]");
         padded = 0;
         /* not supported */
         break;
     case EMPH:
-        charvector_append_printf(out, "\\fI");
+        charvector_append(out, "\\fI");
         print_groff_mm_element_list(out, elt->children);
-        charvector_append_printf(out, "\\fR");
+        charvector_append(out, "\\fR");
         padded = 0;
         break;
     case STRONG:
-        charvector_append_printf(out, "\\fB");
+        charvector_append(out, "\\fB");
         print_groff_mm_element_list(out, elt->children);
-        charvector_append_printf(out, "\\fR");
+        charvector_append(out, "\\fR");
         padded = 0;
         break;
     case STRIKE:
-        charvector_append_printf(out, "\\c\n.ST \"");
+        charvector_append(out, "\\c\n.ST \"");
         print_groff_mm_element_list(out, elt->children);
-        charvector_append_printf(out, "\"");
+        charvector_append(out, "\"");
         pad(out, 1);
         break;
     case LIST:
@@ -1034,7 +1034,7 @@ static void print_groff_mm_element(charvector *out, element *elt, int count) {
         pad(out, 1);
         charvector_append_printf(out, ".H %d \"", lev);
         print_groff_mm_element_list(out, elt->children);
-        charvector_append_printf(out, "\"");
+        charvector_append(out, "\"");
         padded = 0;
         break;
     case PLAIN:
@@ -1045,13 +1045,13 @@ static void print_groff_mm_element(charvector *out, element *elt, int count) {
     case PARA:
         pad(out, 1);
         if (!in_list_item || count != 1)
-            charvector_append_printf(out, ".P\n");
+            charvector_append(out, ".P\n");
         print_groff_mm_element_list(out, elt->children);
         padded = 0;
         break;
     case HRULE:
         pad(out, 1);
-        charvector_append_printf(out, "\\l'\\n(.lu*8u/10u'");
+        charvector_append(out, "\\l'\\n(.lu*8u/10u'");
         padded = 0;
         break;
     case HTMLBLOCK:
@@ -1059,32 +1059,32 @@ static void print_groff_mm_element(charvector *out, element *elt, int count) {
         break;
     case VERBATIM:
         pad(out, 1);
-        charvector_append_printf(out, ".VERBON 2\n");
+        charvector_append(out, ".VERBON 2\n");
         print_groff_string(out, elt->contents.str);
-        charvector_append_printf(out, ".VERBOFF");
+        charvector_append(out, ".VERBOFF");
         padded = 0;
         break;
     case BULLETLIST:
         pad(out, 1);
-        charvector_append_printf(out, ".BL");
+        charvector_append(out, ".BL");
         padded = 0;
         print_groff_mm_element_list(out, elt->children);
         pad(out, 1);
-        charvector_append_printf(out, ".LE 1");
+        charvector_append(out, ".LE 1");
         padded = 0;
         break;
     case ORDEREDLIST:
         pad(out, 1);
-        charvector_append_printf(out, ".AL");
+        charvector_append(out, ".AL");
         padded = 0;
         print_groff_mm_element_list(out, elt->children);
         pad(out, 1);
-        charvector_append_printf(out, ".LE 1");
+        charvector_append(out, ".LE 1");
         padded = 0;
         break;
     case LISTITEM:
         pad(out, 1);
-        charvector_append_printf(out, ".LI\n");
+        charvector_append(out, ".LI\n");
         in_list_item = true;
         padded = 2;
         print_groff_mm_element_list(out, elt->children);
@@ -1092,23 +1092,23 @@ static void print_groff_mm_element(charvector *out, element *elt, int count) {
         break;
     case BLOCKQUOTE:
         pad(out, 1);
-        charvector_append_printf(out, ".DS I\n");
+        charvector_append(out, ".DS I\n");
         padded = 2;
         print_groff_mm_element_list(out, elt->children);
         pad(out, 1);
-        charvector_append_printf(out, ".DE");
+        charvector_append(out, ".DE");
         padded = 0;
         break;
     case NOTE:
         /* if contents.str == 0, then print note; else ignore, since this
          * is a note block that has been incorporated into the notes list */
         if (elt->contents.str == 0) {
-            charvector_append_printf(out, "\\*F\n");
-            charvector_append_printf(out, ".FS\n");
+            charvector_append(out, "\\*F\n");
+            charvector_append(out, ".FS\n");
             padded = 2;
             print_groff_mm_element_list(out, elt->children);
             pad(out, 1);
-            charvector_append_printf(out, ".FE\n");
+            charvector_append(out, ".FE\n");
             padded = 1; 
         }
         break;
@@ -1134,19 +1134,19 @@ static void print_odf_code_string(charvector *out, char *str) {
     while (*str != '\0') {
         switch (*str) {
         case '&':
-            charvector_append_printf(out, "&amp;");
+            charvector_append(out, "&amp;");
             break;
         case '<':
-            charvector_append_printf(out, "&lt;");
+            charvector_append(out, "&lt;");
             break;
         case '>':
-            charvector_append_printf(out, "&gt;");
+            charvector_append(out, "&gt;");
             break;
         case '"':
-            charvector_append_printf(out, "&quot;");
+            charvector_append(out, "&quot;");
             break;
         case '\n':
-            charvector_append_printf(out, "<text:line-break/>");
+            charvector_append(out, "<text:line-break/>");
             break;
         case ' ':
             tmp = str;
@@ -1156,16 +1156,16 @@ static void print_odf_code_string(charvector *out, char *str) {
                 if (*tmp == ' ') {
                     tmp++;
                     if (*tmp == ' ') {
-                        charvector_append_printf(out, "<text:tab/>");
+                        charvector_append(out, "<text:tab/>");
                         str = tmp;
                     } else {
-                        charvector_append_printf(out, " ");
+                        charvector_append(out, " ");
                     }
                 } else {
-                    charvector_append_printf(out, " ");
+                    charvector_append(out, " ");
                 }
             } else {
-                charvector_append_printf(out, " ");
+                charvector_append(out, " ");
             }
             break;
         default:
@@ -1181,16 +1181,16 @@ static void print_odf_string(charvector *out, char *str) {
     while (*str != '\0') {
         switch (*str) {
         case '&':
-            charvector_append_printf(out, "&amp;");
+            charvector_append(out, "&amp;");
             break;
         case '<':
-            charvector_append_printf(out, "&lt;");
+            charvector_append(out, "&lt;");
             break;
         case '>':
-            charvector_append_printf(out, "&gt;");
+            charvector_append(out, "&gt;");
             break;
         case '"':
-            charvector_append_printf(out, "&quot;");
+            charvector_append(out, "&quot;");
             break;
         case '\n':
             tmp = str;
@@ -1198,12 +1198,12 @@ static void print_odf_string(charvector *out, char *str) {
             if (*tmp == ' ') {
                 tmp--;
                 if (*tmp == ' ') {
-                    charvector_append_printf(out, "<text:line-break/>");
+                    charvector_append(out, "<text:line-break/>");
                 } else {
-                    charvector_append_printf(out, "\n");
+                    charvector_append(out, "\n");
                 }
             } else {
-                charvector_append_printf(out, "\n");
+                charvector_append(out, "\n");
             }
             break;
         case ' ':
@@ -1214,16 +1214,16 @@ static void print_odf_string(charvector *out, char *str) {
                 if (*tmp == ' ') {
                     tmp++;
                     if (*tmp == ' ') {
-                        charvector_append_printf(out, "<text:tab/>");
+                        charvector_append(out, "<text:tab/>");
                         str = tmp;
                     } else {
-                        charvector_append_printf(out, " ");
+                        charvector_append(out, " ");
                     }
                 } else {
-                    charvector_append_printf(out, " ");
+                    charvector_append(out, " ");
                 }
             } else {
-                charvector_append_printf(out, " ");
+                charvector_append(out, " ");
             }
             break;
         default:
@@ -1250,78 +1250,78 @@ static void print_odf_element(charvector *out, element *elt) {
         charvector_append_printf(out, "%s", elt->contents.str);
         break;
     case LINEBREAK:
-        charvector_append_printf(out, "<text:line-break/>");
+        charvector_append(out, "<text:line-break/>");
         break;
     case STR:
         print_html_string(out, elt->contents.str, 0);
         break;
     case ELLIPSIS:
-        charvector_append_printf(out, "&hellip;");
+        charvector_append(out, "&hellip;");
         break;
     case EMDASH:
-        charvector_append_printf(out, "&mdash;");
+        charvector_append(out, "&mdash;");
         break;
     case ENDASH:
-        charvector_append_printf(out, "&ndash;");
+        charvector_append(out, "&ndash;");
         break;
     case APOSTROPHE:
-        charvector_append_printf(out, "&rsquo;");
+        charvector_append(out, "&rsquo;");
         break;
     case SINGLEQUOTED:
-        charvector_append_printf(out, "&lsquo;");
+        charvector_append(out, "&lsquo;");
         print_odf_element_list(out, elt->children);
-        charvector_append_printf(out, "&rsquo;");
+        charvector_append(out, "&rsquo;");
         break;
     case DOUBLEQUOTED:
-        charvector_append_printf(out, "&ldquo;");
+        charvector_append(out, "&ldquo;");
         print_odf_element_list(out, elt->children);
-        charvector_append_printf(out, "&rdquo;");
+        charvector_append(out, "&rdquo;");
         break;
     case CODE:
-        charvector_append_printf(out, "<text:span text:style-name=\"Source_20_Text\">");
+        charvector_append(out, "<text:span text:style-name=\"Source_20_Text\">");
         print_html_string(out, elt->contents.str, 0);
-        charvector_append_printf(out, "</text:span>");
+        charvector_append(out, "</text:span>");
         break;
     case HTML:
         break;
     case LINK:
-        charvector_append_printf(out, "<text:a xlink:type=\"simple\" xlink:href=\"");
+        charvector_append(out, "<text:a xlink:type=\"simple\" xlink:href=\"");
         print_html_string(out, elt->contents.link->url, 0);
-        charvector_append_printf(out, "\"");
+        charvector_append(out, "\"");
         if (strlen(elt->contents.link->title) > 0) {
-            charvector_append_printf(out, " office:name=\"");
+            charvector_append(out, " office:name=\"");
             print_html_string(out, elt->contents.link->title, 0);
-            charvector_append_printf(out, "\"");
+            charvector_append(out, "\"");
         }
-        charvector_append_printf(out, ">");
+        charvector_append(out, ">");
         print_odf_element_list(out, elt->contents.link->label);
-        charvector_append_printf(out, "</text:a>");
+        charvector_append(out, "</text:a>");
         break;
     case IMAGE:
-        charvector_append_printf(out, "<draw:frame text:anchor-type=\"as-char\"\ndraw:z-index=\"0\" draw:style-name=\"fr1\" svg:width=\"95%%\"");
-        charvector_append_printf(out, ">\n<draw:text-box><text:p><draw:frame text:anchor-type=\"as-char\" draw:z-index=\"1\" ");
-        charvector_append_printf(out, "><draw:image xlink:href=\"");
+        charvector_append(out, "<draw:frame text:anchor-type=\"as-char\"\ndraw:z-index=\"0\" draw:style-name=\"fr1\" svg:width=\"95%%\"");
+        charvector_append(out, ">\n<draw:text-box><text:p><draw:frame text:anchor-type=\"as-char\" draw:z-index=\"1\" ");
+        charvector_append(out, "><draw:image xlink:href=\"");
         print_odf_string(out, elt->contents.link->url);
-        charvector_append_printf(out,"\" xlink:type=\"simple\" xlink:show=\"embed\" xlink:actuate=\"onLoad\" draw:filter-name=\"&lt;All formats&gt;\"/>\n</draw:frame></text:p>");
-        charvector_append_printf(out, "</draw:text-box></draw:frame>\n");
+        charvector_append(out,"\" xlink:type=\"simple\" xlink:show=\"embed\" xlink:actuate=\"onLoad\" draw:filter-name=\"&lt;All formats&gt;\"/>\n</draw:frame></text:p>");
+        charvector_append(out, "</draw:text-box></draw:frame>\n");
         break;
     case EMPH:
-        charvector_append_printf(out,
+        charvector_append(out,
             "<text:span text:style-name=\"MMD-Italic\">");
         print_odf_element_list(out, elt->children);
-        charvector_append_printf(out, "</text:span>");
+        charvector_append(out, "</text:span>");
         break;
     case STRONG:
-        charvector_append_printf(out,
+        charvector_append(out,
             "<text:span text:style-name=\"MMD-Bold\">");
         print_odf_element_list(out, elt->children);
-        charvector_append_printf(out, "</text:span>");
+        charvector_append(out, "</text:span>");
         break;
     case STRIKE:
-        charvector_append_printf(out,
+        charvector_append(out,
             "<text:span text:style-name=\"StrikeThrough\">");
         print_odf_element_list(out, elt->children);
-        charvector_append_printf(out, "</text:span>");
+        charvector_append(out, "</text:span>");
         break;
     case LIST:
         print_odf_element_list(out, elt->children);
@@ -1334,7 +1334,7 @@ static void print_odf_element(charvector *out, element *elt) {
         lev = elt->key - H1 + 1;  /* assumes H1 ... H6 are in order */
         charvector_append_printf(out, "<text:h text:outline-level=\"%d\">", lev);
         print_odf_element_list(out, elt->children);
-        charvector_append_printf(out, "</text:h>\n");
+        charvector_append(out, "</text:h>\n");
         padded = 0;
         break;
     case PLAIN:
@@ -1342,34 +1342,34 @@ static void print_odf_element(charvector *out, element *elt) {
         padded = 0;
         break;
     case PARA:
-        charvector_append_printf(out, "<text:p");
+        charvector_append(out, "<text:p");
         switch (odf_type) {
             case BLOCKQUOTE:
-                charvector_append_printf(out," text:style-name=\"Quotations\"");
+                charvector_append(out," text:style-name=\"Quotations\"");
                 break;
             case CODE:
-                charvector_append_printf(out," text:style-name=\"Preformatted Text\"");
+                charvector_append(out," text:style-name=\"Preformatted Text\"");
                 break;
             case VERBATIM:
-                charvector_append_printf(out," text:style-name=\"Preformatted Text\"");
+                charvector_append(out," text:style-name=\"Preformatted Text\"");
                 break;
             case ORDEREDLIST:
             case BULLETLIST:
-                charvector_append_printf(out," text:style-name=\"P2\"");
+                charvector_append(out," text:style-name=\"P2\"");
                 break;
             case NOTE:
-                charvector_append_printf(out," text:style-name=\"Footnote\"");
+                charvector_append(out," text:style-name=\"Footnote\"");
                 break;
             default:
-                charvector_append_printf(out," text:style-name=\"Standard\"");
+                charvector_append(out," text:style-name=\"Standard\"");
                 break;
         }
-        charvector_append_printf(out, ">");
+        charvector_append(out, ">");
         print_odf_element_list(out, elt->children);
-        charvector_append_printf(out, "</text:p>\n");
+        charvector_append(out, "</text:p>\n");
         break;
     case HRULE:
-        charvector_append_printf(out,"<text:p text:style-name=\"Horizontal_20_Line\"/>\n");
+        charvector_append(out,"<text:p text:style-name=\"Horizontal_20_Line\"/>\n");
         break;
     case HTMLBLOCK:
         /* don't print HTML block */
@@ -1383,9 +1383,9 @@ static void print_odf_element(charvector *out, element *elt) {
     case VERBATIM:
         old_type = odf_type;
         odf_type = VERBATIM;
-        charvector_append_printf(out, "<text:p text:style-name=\"Preformatted Text\">");
+        charvector_append(out, "<text:p text:style-name=\"Preformatted Text\">");
         print_odf_code_string(out, elt->contents.str);
-        charvector_append_printf(out, "</text:p>\n");
+        charvector_append(out, "</text:p>\n");
         odf_type = old_type;
         break;
     case BULLETLIST:
@@ -1393,7 +1393,7 @@ static void print_odf_element(charvector *out, element *elt) {
             (odf_type == ORDEREDLIST)) {
             /* I think this was made unnecessary by another change.
             Same for ORDEREDLIST below */
-            /*  charvector_append_printf(out, "</text:p>"); */
+            /*  charvector_append(out, "</text:p>"); */
         }
         old_type = odf_type;
         odf_type = BULLETLIST;
@@ -1405,7 +1405,7 @@ static void print_odf_element(charvector *out, element *elt) {
     case ORDEREDLIST:
         if ((odf_type == BULLETLIST) ||
             (odf_type == ORDEREDLIST)) {
-            /* charvector_append_printf(out, "</text:p>"); */
+            /* charvector_append(out, "</text:p>"); */
         }
         old_type = odf_type;
         odf_type = ORDEREDLIST;
@@ -1415,9 +1415,9 @@ static void print_odf_element(charvector *out, element *elt) {
         odf_type = old_type;
         break;
     case LISTITEM:
-        charvector_append_printf(out, "<text:list-item>\n");
+        charvector_append(out, "<text:list-item>\n");
         if (elt->children->children->key != PARA) {
-            charvector_append_printf(out, "<text:p text:style-name=\"P2\">");
+            charvector_append(out, "<text:p text:style-name=\"P2\">");
         }
         print_odf_element_list(out, elt->children);
 
@@ -1425,10 +1425,10 @@ static void print_odf_element(charvector *out, element *elt) {
             (list_contains_key(elt->children,ORDEREDLIST)))) {
             } else {
                 if (elt->children->children->key != PARA) {
-                    charvector_append_printf(out, "</text:p>");
+                    charvector_append(out, "</text:p>");
                 }
             }
-        charvector_append_printf(out, "</text:list-item>\n");
+        charvector_append(out, "</text:list-item>\n");
         break;
     case BLOCKQUOTE:
         old_type = odf_type;
@@ -1443,9 +1443,9 @@ static void print_odf_element(charvector *out, element *elt) {
         odf_type = NOTE;
         /* if contents.str == 0 then print; else ignore - like above */
         if (elt->contents.str == 0) {
-            charvector_append_printf(out, "<text:note text:id=\"\" text:note-class=\"footnote\"><text:note-body>\n");
+            charvector_append(out, "<text:note text:id=\"\" text:note-class=\"footnote\"><text:note-body>\n");
             print_odf_element_list(out, elt->children);
-            charvector_append_printf(out, "</text:note-body>\n</text:note>\n");
+            charvector_append(out, "</text:note-body>\n</text:note>\n");
        }
         elt->children = NULL;
         odf_type = old_type;
@@ -1482,14 +1482,14 @@ void print_element_list(charvector *out, element *elt, int format, int exts) {
         break;
     case GROFF_MM_FORMAT:
         if (extensions & EXT_STRIKE) {
-          charvector_append_printf(out,
+          charvector_append(out,
               ".de ST\n.nr width \\w'\\\\$1'\n\\Z@\\v'-.25m'\\l'\\\\n[width]u'@\\\\$1\\c\n..\n.\n");
         }
         print_groff_mm_element_list(out, elt);
         break;
     case ODF_FORMAT:
         print_odf_header(out);
-        charvector_append_printf(out, "<office:body>\n<office:text>\n");
+        charvector_append(out, "<office:body>\n<office:text>\n");
         if (elt != NULL) print_odf_element_list(out,elt);
         print_odf_footer(out);
         break;
@@ -1506,7 +1506,7 @@ From odf.c - Utility routines to enable ODF support in peg-multimarkdown.
 void print_odf_header(charvector *out){
     
     /* Insert required XML header */
-    charvector_append_printf(out,
+    charvector_append(out,
 "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" \
 "<office:document xmlns:office=\"urn:oasis:names:tc:opendocument:xmlns:office:1.0\"\n" \
 "     xmlns:style=\"urn:oasis:names:tc:opendocument:xmlns:style:1.0\"\n" \
@@ -1545,7 +1545,7 @@ void print_odf_header(charvector *out){
 "     office:mimetype=\"application/vnd.oasis.opendocument.text\">\n");
     
     /* Font Declarations */
-    charvector_append_printf(out, "<office:font-face-decls>\n" \
+    charvector_append(out, "<office:font-face-decls>\n" \
     "   <style:font-face style:name=\"Courier New\" svg:font-family=\"'Courier New'\"\n" \
     "                    style:font-adornments=\"Regular\"\n" \
     "                    style:font-family-generic=\"modern\"\n" \
@@ -1553,7 +1553,7 @@ void print_odf_header(charvector *out){
     "</office:font-face-decls>\n");
     
     /* Append basic style information */
-    charvector_append_printf(out, "<office:styles>\n" \
+    charvector_append(out, "<office:styles>\n" \
     "<style:style style:name=\"Standard\" style:family=\"paragraph\" style:class=\"text\">\n" \
     "      <style:paragraph-properties fo:margin-top=\"0in\" fo:margin-bottom=\"0.15in\"" \
     "     fo:text-align=\"justify\" style:justify-single-word=\"false\"/>\n" \
@@ -1621,7 +1621,7 @@ void print_odf_header(charvector *out){
     "</office:styles>\n");
 
     /* Automatic style information */
-    charvector_append_printf(out, "<office:automatic-styles>" \
+    charvector_append(out, "<office:automatic-styles>" \
     "   <style:style style:name=\"MMD-Italic\" style:family=\"text\">\n" \
     "      <style:text-properties fo:font-style=\"italic\" style:font-style-asian=\"italic\"\n" \
     "                             style:font-style-complex=\"italic\"/>\n" \
@@ -1665,7 +1665,7 @@ void print_odf_header(charvector *out){
 }
 
 void print_odf_footer(charvector *out) {
-    charvector_append_printf(out, "</office:text>\n</office:body>\n</office:document>");
+    charvector_append(out, "</office:text>\n</office:body>\n</office:document>");
 }
 
 /************************************************************************
@@ -2133,6 +2133,7 @@ markdown_to_string(3)
 int markdown_to_manpage( const char *markdown, const char *out )
 {
   int i, j, k;                  /* indecies */
+  int verb = 0;                 /* whether we're in verbatim mode */
   charvector preprocessed = {}; /* text with preprocessing */
   charvector converted = {};    /* output of markdown parser */
   char *line, *next, *nnext;    /* pointers to start and end of lines */
@@ -2153,7 +2154,7 @@ int markdown_to_manpage( const char *markdown, const char *out )
     if ( !out[i] )
       out = NULL;
     else if ( !( fp = popen( out + i, "w" ) ) )  {
-      fprintf( stderr, "markdown_to_manpage: could not open pipe\n" );
+      fputs( "markdown_to_manpage: could not open pipe\n", stderr );
       return 1;
     }
   }
@@ -2226,7 +2227,7 @@ int markdown_to_manpage( const char *markdown, const char *out )
 	      !isspace( (int)( line[i] ) ) && line[i] != ')'; i++, j++ )
 	buf[j] = line[i];
       if ( j >= LEN ) {
-	fprintf( stderr, "markdown_to_manpage: section name too long\n" );
+	fputs( "markdown_to_manpage: section name too long\n", stderr );
 	charvector_free( &converted );
 	if ( out && out[0] == '|' )
 	  return pclose( fp );
@@ -2278,10 +2279,13 @@ int markdown_to_manpage( const char *markdown, const char *out )
       fputs( ".PP\n.RS\n", fp );
     else if ( MATCH( line, ".DE" ) )
       fputs( ".RE\n", fp );
-    else if ( MATCH( line, ".VERBON" ) )
+    else if ( MATCH( line, ".VERBON" ) ) {
       fputs( "\n.RS\n.EX\n", fp );
-    else if ( MATCH( line, ".VERBOFF" ) )
+      verb = 1;
+    } else if ( MATCH( line, ".VERBOFF" ) ) {
       fputs( ".EE\n.RE\n", fp );
+      verb = 0;
+    }
     /* Ordered and unordered lists. */
     else if ( MATCH( line, ".BL" ) ) {
       if ( list[0] )
@@ -2358,7 +2362,10 @@ int markdown_to_manpage( const char *markdown, const char *out )
     }
 
     /* Default: just write the line. */
-    else
+    else if ( verb ) {
+      fputs( line, fp );
+      fputc( '\n', fp );
+    } else
       write_manpage_line( line, fp );
   }
 
