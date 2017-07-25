@@ -15,6 +15,15 @@
 
 ZLIB = yes
 
+# The installation prefix, and, optionally, the individual install
+# directories, are set by the following variables.
+
+PREFIX = $(HOME)
+BINDIR = $(PREFIX)/bin
+LIBDIR = $(PREFIX)/lib
+INCLUDEDIR = $(PREFIX)/include
+MANDIR = $(PREFIX)/share/man
+
 # The rest of this Makefile uses standard options and default methods,
 # and will normally not require modification.
 
@@ -86,6 +95,39 @@ else
 	rm testplot.bbx $(DATAUNZIP)
 endif
 	@echo -e "\x1b[32;1mSUCCESS:\x1b[0m output in testplot.eps"
+
+# Install or uninstall files in common directories.  The install
+# target also writes the .uninstall script.
+install: .installed
+.installed: liblofasmio.a $(PROGS) $(HEADERS) doc/*
+	touch .installed
+	mkdir -p $(LIBDIR); for file in liblofasmio.a; do \
+		dest=$(LIBDIR)/$$file; \
+		cp $$file $$dest && grep -q $$dest .installed \
+		|| echo $$dest >> .installed; done
+	mkdir -p $(BINDIR); for file in $(ALLPROGS); do \
+		dest=$(BINDIR)/$$file; \
+		cp $$file $$dest && grep -q $$dest .installed \
+		|| echo $$dest >> .installed; done
+	mkdir -p $(INCLUDEDIR); for file in $(ALLHEADERS); do \
+		dest=$(INCLUDEDIR)/$$file; \
+		cp $$file $$dest && grep -q $$dest .installed \
+		|| echo $$dest >> .installed; done
+	cd doc; for i in 1 2 3 4 5 6 7 8 9; do \
+		mkdir -p $(MANDIR)/man$$i; for file in *.$$i; do \
+			if [ -e $$file ]; then \
+				dest=$(MANDIR)/man$$i/$$file; \
+				cp $$file $$dest \
+				&& grep -q $$dest ../.installed \
+				|| echo $$dest >> ../.installed; \
+			fi; done; done
+uninstall:
+	if [ -e .installed ]; then for file in `cat .installed`; do \
+		rm $$file; if [ -e $$file ]; then \
+			echo $$file >> .still-installed; fi; done; \
+		if [ -e .still-installed ]; then \
+			mv .still-installed .installed; else \
+			rm .installed; fi; fi
 
 # Create/restore uncompiled distribution.
 dist: $(DIST).tar.gz
