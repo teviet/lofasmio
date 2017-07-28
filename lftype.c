@@ -33,7 +33,7 @@ static const char *description = "\
 \n\
 ## NAME\n\
 \n\
-`lftype` - change type of a lofasm-filterbank(5) or related file\n\
+`lftype(1)` - change type of a lofasm-filterbank(5) or related file\n\
 \n\
 ## SYNOPSIS\n\
 \n\
@@ -392,7 +392,7 @@ main( int argc, char **argv )
     free( encoding );
     return 1;
   }
-  for ( c = intype; !isdigit( (int)( c ) ); c++ )
+  for ( c = intype; !isdigit( (int)( *c ) ); c++ )
     ;
   if ( atoi( c ) != dimv[dimc-1] ) {
     lf_error( "input type %s does not match bit depth %d", intype,
@@ -422,7 +422,7 @@ main( int argc, char **argv )
     return 4;
   }
   sprintf( headv[i], "%s %s", typekey, outtype );
-  for ( c = outtype; !isdigit( (int)( c ) ); c++ )
+  for ( c = outtype; !isdigit( (int)( *c ) ); c++ )
     ;
   dimv[dimc-1] = atoi( c );
 

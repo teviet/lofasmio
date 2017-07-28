@@ -50,7 +50,7 @@ ZLIB INTERFACE ROUTINES
 
 ## NAME
 
-`lfopen` - open a compressed or uncompressed file
+`lfopen(3)` - open a compressed or uncompressed file
 
 ## SYNOPSIS
 
@@ -144,7 +144,7 @@ FILE *lfopen( const char *filename, const char *mode )
 
 ## NAME
 
-`lfdopen` - allow compressed access to an open file descriptor
+`lfdopen(3)` - allow compressed access to an open file descriptor
 
 ## SYNOPSIS
 
@@ -252,7 +252,7 @@ typedef struct tagstrlist_t {
 
 ## NAME
 
-`bxReadData` - read data from an abx(5) or bbx(5) file
+`bxReadData(3)` - read data from an abx(5) or bbx(5) file
 
 ## SYNOPSIS
 
@@ -333,7 +333,7 @@ bxReadData( const char *encoding, void *buf, size_t n, FILE *fp )
 
 ## NAME
 
-`bxRead` - read an abx(5) or bbx(5) file
+`bxRead(3)` - read an abx(5) or bbx(5) file
 
 ## SYNOPSIS
 
@@ -713,7 +713,7 @@ bxRead( FILE *fp, int *headc, char ***headv, int *dimc, int **dimv,
 
 ## NAME
 
-`bxSkipHeader` - skip to start of ABX/BBX data block
+`bxSkipHeader(3)` - skip to start of ABX/BBX data block
 
 ## SYNOPSIS
 
@@ -761,7 +761,7 @@ bxSkipHeader( FILE *fp )
 
 ## NAME
 
-`bxWriteData` - write data to an abx(5) or bbx(5) file
+`bxWriteData(3)` - write data to an abx(5) or bbx(5) file
 
 ## SYNOPSIS
 
@@ -867,7 +867,7 @@ bxWriteData( const char *encoding, const void *buf, size_t n,
 
 ## NAME
 
-`bxWrite` - write an abx(5) or bbx(5) file
+`bxWrite(3)` - write an abx(5) or bbx(5) file
 
 ## SYNOPSIS
 
@@ -1119,7 +1119,7 @@ si_value( double *value, char *string, char *unit )
 
 ## NAME
 
-`lfbxRead` - read a BBX file with LoFASM filterbank header
+`lfbxRead(3)` - read a BBX file with LoFASM filterbank header
 
 ## SYNOPSIS
 
@@ -1130,7 +1130,7 @@ si_value( double *value, char *string, char *unit )
 ## DESCRIPTION
 
 This function reads a standard LoFASM data file: a BBX file with
-specific header fields needed to populate a lfb_hdr(5) structure.  The
+specific header fields needed to populate a `lfb_hdr` structure.  The
 _fp_ argument should point to the start of an open binary-readable
 file, and the _header_ should point to the structure to be populated;
 both must be non-NULL.  See the lofasm-filterbank(5) documentation for
@@ -1161,7 +1161,6 @@ allow for higher-level diagnostics.
 
 lfbxWrite(3),
 bbx(5),
-lfb_hdr(5),
 lofasm-filterbank(5)
 
 </MARKDOWN> */
@@ -1367,7 +1366,7 @@ lfbxRead( FILE *fp, lfb_hdr *header, void **data )
 
 ## NAME
 
-`lfbxWrite` - write a BBX file with LoFASM filterbank header
+`lfbxWrite(3)` - write a BBX file with LoFASM filterbank header
 
 ## SYNOPSIS
 
@@ -1378,7 +1377,7 @@ lfbxRead( FILE *fp, lfb_hdr *header, void **data )
 ## DESCRIPTION
 
 This function writes a standard LoFASM data file: a BBX file with
-specific header fields taken from a lfb_hdr(5) structure.  The _fp_
+specific header fields taken from a `lfb_hdr` structure.  The _fp_
 argument should point to the start of an open binary-writable file,
 and the _header_ should point to the structure to be populated; both
 must be non-NULL.  See the lofasm-filterbak(5) documentation for more
@@ -1412,7 +1411,6 @@ does not specify a positive length of data.
 
 lfbxRead(3),
 bbx(5),
-lfb_hdr(5),
 lofasm-filterbank(5)
 
 </MARKDOWN> */
@@ -1547,7 +1545,7 @@ lfbxWrite( FILE *fp, lfb_hdr *header, void *data )
 
 ## NAME
 
-`lfbxFree` - frees a LoFASM filterbank header
+`lfbxFree(3)` - frees a LoFASM filterbank header
 
 ## SYNOPSIS
 
@@ -1557,7 +1555,7 @@ lfbxWrite( FILE *fp, lfb_hdr *header, void *data )
 
 ## DESCRIPTION
 
-This function frees a lfb_hdr(5) structure allocated and populated by
+This function frees a `lfb_hdr` structure allocated and populated by
 (for example) lfbxRead(3).  If you have manually replaced any of the
 pointer fields with pointers to static memory, then errors will occur
 attempting to free them, so be careful to set these fields to NULL
@@ -1570,7 +1568,6 @@ This function does not return a value.
 ## SEE ALSO
 
 lfbxRead(3),
-lfb_hdr(5),
 lofasm-filterbank(5)
 
 </MARKDOWN> */

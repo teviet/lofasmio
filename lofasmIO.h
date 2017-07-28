@@ -255,11 +255,11 @@ STATUS LOGGING MACROS
 
 /*
 <MARKDOWN>
-# lf_error(3)
+# lf_error(3), lf_warning(3), lf_info(3)
 
 ## NAME
 
-`lf_error, lf_warning, lf_info` - print status messages
+`lf_error(3), lf_warning(3), lf_info(3)` - print status messages
 
 ## SYNOPSIS
 

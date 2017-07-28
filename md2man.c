@@ -38,7 +38,7 @@ static const char *description = "\
 \n\
 ## NAME\n\
 \n\
-`md2man` - convert markdown to Unix manpage\n\
+`md2man(1)` - convert markdown to Unix manpage\n\
 \n\
 ## SYNOPSIS\n\
 \n\

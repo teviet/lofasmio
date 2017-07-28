@@ -35,7 +35,7 @@ static const char *description = "\
 \n\
 ## NAME\n\
 \n\
-`lfmed` - perform running medians on a lofasm-filterbank(5) file\n\
+`lfmed(1)` - perform running medians on a lofasm-filterbank(5) file\n\
 \n\
 ## SYNOPSIS\n\
 \n\

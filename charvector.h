@@ -40,11 +40,11 @@ extern "C" {
 
 /*
 <MARKDOWN>
-# charvector(3) 2016-07-13
+# charvector(3), charvector_append(3), charvector_append_c(3), charvector_append_vprintf(3), charvector_append_printf(3), charvector_insert(3), charvector_replace(3), charvector_pad(3), charvector_trim(3), charvector_resize(3), charvector_free(3) 2016-07-13
 
 ## NAME
 
-`charvector` - a resizeable string structure
+`charvector(3)` - a resizeable string structure
 
 ## SYNOPSIS
 
@@ -157,7 +157,7 @@ charvector_insert() inserts a nul-terminated string _src_ into
 _cv_`->str` starting at byte _offset_.  The trailing portion of
 _cv_`->str` is not overwritten but pushed back to follow the inserted
 string.  The value of _offset_ must be less than or equal to than the
-original length of _cv_`->str` (equality simplu appends _src_ to
+original length of _cv_`->str` (equality simply appends _src_ to
 _cv_`->str`); otherwise an error is returned.
 
 charvector_replace() searches _cv_`->str` for all occurrences of the

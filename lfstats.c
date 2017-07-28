@@ -35,7 +35,7 @@ static const char *description = "\
 \n\
 ## NAME\n\
 \n\
-`lfstats` - get statistics of lofasm-filterbank(5) file\n\
+`lfstats(1)` - get statistics of lofasm-filterbank(5) file\n\
 \n\
 ## SYNOPSIS\n\
 \n\

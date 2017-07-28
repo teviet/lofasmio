@@ -35,7 +35,7 @@ static const char *description = "\
 \n\
 ## NAME\n\
 \n\
-`lfmean` - perform running means on a lofasm-filterbank(5) file\n\
+`lfmean(1)` - perform running means on a lofasm-filterbank(5) file\n\
 \n\
 ## SYNOPSIS\n\
 \n\

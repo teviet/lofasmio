@@ -33,7 +33,7 @@ static const char *description = "\
 \n\
 ## NAME\n\
 \n\
-`bxresample` - resize abx(5) or bbx(5) files\n\
+`bxresample(1)` - resize abx(5) or bbx(5) files\n\
 \n\
 ## SYNOPSIS\n\
 \n\

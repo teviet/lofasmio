@@ -38,7 +38,7 @@ static const char *description = "\
 \n\
 ## NAME\n\
 \n\
-`lfcat` - concatenate lofasm-filterbank(5) files\n\
+`lfcat(1)` - concatenate lofasm-filterbank(5) files\n\
 \n\
 ## SYNOPSIS\n\
 \n\

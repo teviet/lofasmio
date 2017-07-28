@@ -35,7 +35,7 @@ static const char *description = "\
 \n\
 ## NAME\n\
 \n\
-`lfchop` - extract frequency band from LoFASM data\n\
+`lfchop(1)` - extract frequency band from LoFASM data\n\
 \n\
 ## SYNOPSIS\n\
 \n\

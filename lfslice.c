@@ -35,7 +35,7 @@ static const char *description = "\
 \n\
 ## NAME\n\
 \n\
-`lfslice` - extract frequency band from LoFASM data\n\
+`lfslice(1)` - extract frequency band from LoFASM data\n\
 \n\
 ## SYNOPSIS\n\
 \n\

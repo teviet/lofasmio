@@ -1796,7 +1796,7 @@ static element * process_raw_blocks(element *input, int extensions, element *ref
 
 ## NAME
 
-`markdown_to_string` - convert markdown text to various formats
+`markdown_to_charvector(3)` - convert markdown text to various formats
 
 ## SYNOPSIS
 
@@ -1877,7 +1877,7 @@ void markdown_to_charvector( charvector *out, char *text,
 
 ## NAME
 
-`markdown_to_string` - convert markdown text to various formats
+`markdown_to_string(3)` - convert markdown text to various formats
 
 ## SYNOPSIS
 
@@ -2014,11 +2014,11 @@ write_manpage_line( char *line, FILE *fp )
 
 /*
 <MARKDOWN>
-# markdown_to_manpage(3) 2016-07-11
+# markdown_to_manpage(3) 2017-04-19
 
 ## NAME
 
-`markdown_to_manpage` - write manpage(s) from markdown text
+`markdown_to_manpage(3)` - write manpage(s) from markdown text
 
 ## SYNOPSIS
 
@@ -2041,7 +2041,7 @@ character as its first character, then the rest of the string is a
 command to pe opened with popen(3): the output of
 markdown_to_manpage() will be piped to the input of the specified
 command.  If `|` is the only character, or is followed only by
-whitespace, the output reverts to `stdout`, as if _OUT_ were NULL.
+whitespace, the output reverts to `stdout`, as if _out_ were NULL.
 (Note that `|cat` produces similar results, but formally passes
 through the `cat` command invoked from the shell.)
 
@@ -2058,8 +2058,16 @@ _topic_`.`_sec_ in the directory specified by _out_, until another
 top-level header specifies a new file.  Any text preceding the first
 top-level header will be sent to `stdout` as above.
 
-Optionally, the topic and section in the header may be followed by a
-modification date in the form `YYYY-MM-DD`, the source (module or
+If several titles _topic1_`(`_sec1_`), `_topic2_`(`_sec2_`), ...`
+appear on the subject line delimited by commas, the first is used as
+the man page title, and will be given a full man page.  However,
+subsequent topics will be given their own man pages _topicN_`.`_secN_
+containing the groff(1) source directive `.so
+man`_sec1_`/`_topic1_`.`_sec1_ which will point man(1) to the full man
+page.
+
+Optionally, the topic(s) and section(s) in the header may be followed
+by a modification date in the form `YYYY-MM-DD`, the source (module or
 library providing the command), and the manual title; see man-pages(7)
 for more information.  The case (lower or upper) of characters in
 _topic_ should match the actual name of the function or program, which
@@ -2134,15 +2142,18 @@ int markdown_to_manpage( const char *markdown, const char *out )
 {
   int i, j, k;                  /* indecies */
   int verb = 0;                 /* whether we're in verbatim mode */
+  int first = 0;                /* whether we're reading first topic name */
   charvector preprocessed = {}; /* text with preprocessing */
   charvector converted = {};    /* output of markdown parser */
   char *line, *next, *nnext;    /* pointers to start and end of lines */
-  char buf[LEN];                /* filename or line indentation buffer */
+  char buf[LEN];                /* topic name or line indentation buffer */
+  char topic[LEN];              /* topic.sec string */
+  char *section = NULL;         /* .sec part of topic.sec string */
   char path[LEN];               /* file path */
   char list[LEN] = {};          /* nested list types */
   char ul = '-', ol = 'a';      /* list item specifiers */
   int itemno[LEN];              /* nested list item counts */
-  FILE *fp = stdout;            /* output file pointer */
+  FILE *fp = stdout, *fp1;      /* output file pointers */
 
   /* Check input arguments.  If out is NULL or specifies a pipe to no
      command, write to stdout as per default. */
@@ -2217,47 +2228,65 @@ int markdown_to_manpage( const char *markdown, const char *out )
        If out is not NULL, we must also open the appropriate output
        file or pipe. */
     if ( MATCH( line, ".H 1" ) ) {
-      for ( i = 6, j = 0; line[i] && line[i+1] && j < LEN - 1 &&
-	      !isspace( (int)( line[i] ) ) && line[i] != '('; i++, j++ )
-	buf[j] = line[i];
-      buf[ ( k = j++ ) ] = '.';
-      for ( i++; line[i] && line[i+1] && isspace( (int)( line[i] ) ); i++ )
-	;
-      for ( ; line[i] && line[i+1] && j < LEN &&
-	      !isspace( (int)( line[i] ) ) && line[i] != ')'; i++, j++ )
-	buf[j] = line[i];
-      if ( j >= LEN ) {
-	fputs( "markdown_to_manpage: section name too long\n", stderr );
-	charvector_free( &converted );
-	if ( out && out[0] == '|' )
-	  return pclose( fp );
-	if ( fp != stdout )
-	  fclose( fp );
-	return 2;
-      }
-      buf[j] = '\0';
-      if ( out && out[0] != '|' ) {
-	if ( fp != stdout )
-	  fclose( fp );
-	if ( snprintf( path, LEN, "%s/%s", out, buf ) >= LEN - 1 ) {
-	  fprintf( stderr, "markdown_to_manpage: path too long"
-		   " (max %d characters)\n", LEN - 1 );
+      i = 5;
+      first = 1;
+      do {
+	for ( i++; isspace( line[i] ); i++ )
+	  ;
+	for ( j = 0; line[i] && line[i+1] && j < LEN - 1 &&
+		!isspace( (int)( line[i] ) ) && line[i] != '('; i++, j++ )
+	  buf[j] = line[i];
+	buf[ ( k = j++ ) ] = '.';
+	for ( i++; line[i] && line[i+1] && isspace( (int)( line[i] ) ); i++ )
+	  ;
+	for ( ; line[i] && line[i+1] && j < LEN &&
+		!isspace( (int)( line[i] ) ) && line[i] != ')'; i++, j++ )
+	  buf[j] = line[i];
+	if ( j >= LEN ) {
+	  fputs( "markdown_to_manpage: section name too long\n", stderr );
 	  charvector_free( &converted );
-	  return 1;
+	  if ( out && out[0] == '|' )
+	    return pclose( fp );
+	  if ( fp != stdout )
+	    fclose( fp );
+	  return 2;
 	}
-	if ( !( fp = fopen( path, "w" ) ) ) {
-	  fprintf( stderr, "markdown_to_manpage: could not open %s\n", path );
-	  charvector_free( &converted );
-	  return 1;
+	buf[j] = '\0';
+	if ( out && out[0] != '|' ) {
+	  if ( first && fp != stdout )
+	    fclose( fp );
+	  if ( snprintf( path, LEN, "%s/%s", out, buf ) >= LEN - 1 ) {
+	    fprintf( stderr, "markdown_to_manpage: path too long"
+		     " (max %d characters)\n", LEN - 1 );
+	    charvector_free( &converted );
+	    return 1;
+	  }
+	  if ( !( fp1 = fopen( path, "w" ) ) ) {
+	    fprintf( stderr, "markdown_to_manpage: could not open %s\n",
+		     path );
+	    charvector_free( &converted );
+	    return 1;
+	  }
+	  if ( first )
+	    fp = fp1;
+	  else {
+	    fprintf( fp1, ".so man%s/%s\n", section + 1, topic );
+	    fclose( fp1 );
+	  }
 	}
-      }
-      for ( j = 0; j < k; j++ )
-	buf[j] = toupper( buf[j] );
-      buf[k] = ' ';
+	if ( first ) {
+	  strcpy( topic, buf );
+	  section = strchr( topic, '.' );
+	  first = 0;
+	}
+      } while ( line[++i] == ',' );
+      for ( j = 0; topic + j < section; j++ )
+	topic[j] = toupper( topic[j] );
+      topic[j] = ' ';
       fputs( ".TH ", fp );
-      fputs( buf, fp );
+      fputs( topic, fp );
       fputc( ' ', fp );
-      for ( i++; line[i] && line[i+1]; i++ )
+      for ( ; line[i] && line[i+1]; i++ )
 	fputc( line[i], fp );
       fputc( '\n', fp );
     }
@@ -2384,7 +2413,7 @@ int markdown_to_manpage( const char *markdown, const char *out )
 
 ## NAME
 
-`markdown_to_manterm` - format markdown text for basic terminal display
+`markdown_to_manterm(3)` - format markdown text for basic terminal display
 
 ## SYNOPSIS
 
@@ -2704,7 +2733,7 @@ int markdown_to_manterm_old( const char *markdown, FILE *fp )
 
 ## NAME
 
-`markdown_to_man_str` - format markdown to simple man(1)-like output
+`markdown_to_man_str(3)` - format markdown to simple man(1)-like output
 
 ## SYNOPSIS
 
@@ -3031,7 +3060,7 @@ char *markdown_to_man_str( const char *markdown )
 
 ## NAME
 
-`markdown_to_manterm` - format markdown text for basic terminal display
+`markdown_to_manterm(3)` - format markdown text for basic terminal display
 
 ## SYNOPSIS
 
@@ -3104,7 +3133,7 @@ int markdown_to_manterm( const char *markdown, FILE *fp )
 
 ## NAME
 
-`markdown_to_man_out` - display markdown manpage on standard output
+`markdown_to_man_out(3)` - display markdown manpage on standard output
 
 ## SYNOPSIS
 

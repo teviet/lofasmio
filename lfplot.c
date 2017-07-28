@@ -39,7 +39,7 @@ static const char *description = "\
 \n\
 ## NAME\n\
 \n\
-`lfplot` - plot lofasm-filterbank(5) data\n\
+`lfplot(1)` - plot lofasm-filterbank(5) data\n\
 \n\
 ## SYNOPSIS\n\
 \n\

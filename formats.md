@@ -705,4 +705,3 @@ lfbxRead(3),
 lfbxWrite(3),
 zlib(3),
 bbx(5),
-lfb_hdr(5)

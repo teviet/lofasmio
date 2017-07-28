@@ -35,7 +35,7 @@ static const char *description = "\
 \n\
 ## NAME\n\
 \n\
-`lftest` - test lofasm routines\n\
+`lftest(1)` - test lofasm routines\n\
 \n\
 ## SYNOPSIS\n\
 \n\

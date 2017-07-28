@@ -40,7 +40,7 @@ static const char *description = "\
 \n\
 ## NAME\n\
 \n\
-`lfplot2d` - plot lofasm-filterbank(5) data in two dimensions\n\
+`lfplot2d(1)` - plot lofasm-filterbank(5) data in two dimensions\n\
 \n\
 ## SYNOPSIS\n\
 \n\
@@ -320,8 +320,8 @@ main( int argc, char **argv )
 	  if ( ( j = strlen( *c ) ) > i )
 	    i = j;
 	for ( c = colour_maps; *c; c += 2 )
-	  fprintf( stdout, "%s:%*s%s\n", c[0], i + 1 - strlen( c[0] ),
-		   "", c[1] );
+	  fprintf( stdout, "%s:%*s%s\n", c[0],
+		   (int)( i + 1 - strlen( c[0] ) ), "", c[1] );
 	return 0;
       }
       carg = optarg;
