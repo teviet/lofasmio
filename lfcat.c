@@ -500,7 +500,7 @@ main( int argc, char **argv )
       CLEANEXIT( 3 );
     }
     kf += h->dim1_span/dt;
-    k = (int)round( kf );
+    k = (int64_t)round( kf );
     if ( k != klast ) {
       lf_error( "misalignment in file %d from argument list\n\t"
 		"(ordered %d after sorting)", idx[i], (int)( i ) );

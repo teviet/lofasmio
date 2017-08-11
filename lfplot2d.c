@@ -460,7 +460,7 @@ main( int argc, char **argv )
   }
 
   /* Compute output dimensions. */
-  memcpy( dims, head.dims, LFB_DMAX*sizeof(int) );
+  memcpy( dims, head.dims, LFB_DMAX*sizeof(int64_t) );
   head.dims[2] = 3;
   head.dims[3] = 8;
   if ( yarg ) {
