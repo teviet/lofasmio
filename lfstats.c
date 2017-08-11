@@ -159,19 +159,20 @@ combi( int n, int k )
 int
 main( int argc, char **argv )
 {
-  char opt;             /* short option character */
-  int lopt;             /* long option index */
-  char *percent = NULL; /* list of percentiles */
-  char *a, *b;          /* pointers witin percent */
-  int moments = 2;      /* highest-order moment */
-  double *mk;           /* array of moments */
-  char *infile;         /* input file name */
-  FILE *fp = NULL;      /* file pointer */
-  lfb_hdr head = {};    /* input header */
-  int i, j, imax, jmax; /* indecies and ranges in dims 1 and 2 */
-  int n, k;             /* number of data read; index over moments */
-  double *data;         /* array of data, or just one row */
-  double d, min, max;   /* datum, minimum, and maximum */
+  char opt;                 /* short option character */
+  int lopt;                 /* long option index */
+  char *percent = NULL;     /* list of percentiles */
+  char *a, *b;              /* pointers witin percent */
+  int moments = 2;          /* highest-order moment */
+  double *mk;               /* array of moments */
+  char *infile;             /* input file name */
+  FILE *fp = NULL;          /* file pointer */
+  lfb_hdr head = {};        /* input header */
+  int64_t i, j, imax, jmax; /* indecies and ranges in dims 1 and 2 */
+  int64_t n;                /* number of data read */
+  int k;                    /* index over moments */
+  double *data;             /* array of data, or just one row */
+  double d, min, max;       /* datum, minimum, and maximum */
 
   /* Parse options. */
   while ( ( opt = getopt_long( argc, argv, short_opts, long_opts, &lopt ) )
@@ -313,7 +314,8 @@ main( int argc, char **argv )
     if ( feof( fp ) )
       memset( data, 0, jmax*sizeof(double) );
     else if ( ( n = fread( data, sizeof(double), jmax, fp ) ) < jmax ) {
-      lf_warning( "read %d doubles, expected %d", i*jmax + n, imax*jmax );
+      lf_warning( "read %lld doubles, expected %lld",
+		  (long long)( i*jmax + n ), (long long)( imax*jmax ) );
       memset( data + n, 0, ( jmax - n )*sizeof(double) );
     }
     for ( j = 0; j < jmax; j++ ) {
@@ -344,7 +346,7 @@ main( int argc, char **argv )
     mk[k] /= pow( mk[2], k );
 
   /* Write arithmetic stats. */
-  printf( "npts:   %d\n", imax*jmax );
+  printf( "npts:   %lld\n", (long long)( imax*jmax ) );
   if ( moments > 0 )
     printf( "mean:   %g\n", mk[1] );
   if ( moments > 1 )

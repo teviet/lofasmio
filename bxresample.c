@@ -41,12 +41,12 @@ static const char *description = "\
 \n\
 ## DESCRIPTION\n\
 \n\
-This program changes the dimensions of an abx(5) or bbx(5) file.  The\n\
-final dimensions lengths are specified by the non-option argument\n\
-_DIMS_ as described below.  The file is read from _INFILE_ and written\n\
-to _OUTFILE_.  If either or both of these are not specified, or are\n\
-given as a single `-` character, then standard input or output is used\n\
-instead.\n\
+This program resamples an abx(5) or bbx(5) file to give it a specified\n\
+number of samples in each dimension.  The final dimensions lengths are\n\
+given by the non-option argument _DIMS_ as described below.  The file\n\
+is read from _INFILE_ and written to _OUTFILE_.  If either or both of\n\
+these are not specified, or are given as a single `-` character, then\n\
+standard input or output is used instead.\n\
 \n\
 The standard form of the _DIMS_ argument is a sequence of positive\n\
 integers joined together, with the `+` sign serving as a delimiter:\n\
@@ -54,18 +54,30 @@ e.g.\n\
 \n\
 > _DIM1_[`+`_DIM2_[`+`...]]\n\
 \n\
-The number of dimension length specified must be less than the number\n\
+The number of dimension lengths specified must be less than the number\n\
 of dimensions in _INFILE_; furthermore, the product of the remaining\n\
 dimensions in _INFILE_ must be a multiple of 8 bits.  Conceptually,\n\
-the argument _DIM1_[`+`...] specifies the number and arrangement of\n\
-basic units to be sampled from _INFILE_, where each basic unit must be\n\
-an integral number of bytes (to avoid complicated bit-shifting when\n\
-writing _OUTFILE_).\n\
+the \"extra\" dimension or dimensions in _INFILE_ define a basic unit\n\
+to be sampled from _INFILE_, and the argument _DIM1_[`+`...] specifies\n\
+the number and arrangement of these units in _OUTFILE_.  Each basic\n\
+unit is required to be an integer number of bytes, to avoid\n\
+complicated bit-shifting when rearranging them.\n\
 \n\
 Optionally, any of _DIM#_ may be of the form `x`_FAC_ or `/`_DIV_\n\
 instead of [`+`]_DIM_: the resulting dimension length will be the\n\
 corresponding dimension from _INFILE_ multipled by _FAC_ or divided by\n\
 _DIV_ (rounded down).\n\
+\n\
+Resampling is done by pointwise sampling without interpolation or\n\
+smoothing of the input.  That is, for each index along each dimension\n\
+in the output, the index is scaled by the ratio of input to output\n\
+dimension lengths and rounded down, and the corresponding point in the\n\
+input file is selected.\n\
+\n\
+In the common case where one wants to downsample a dimension by\n\
+averaging over multiple input samples, one should first smooth the\n\
+input file by computing a running average, e.g. with lfmean(1), and\n\
+then call bxresample(1).\n\
 \n\
 ## OPTIONS\n\
 \n\
@@ -130,16 +142,17 @@ main( int argc, char **argv )
   char *a, *b;            /* pointers within dims */
   FILE *fpin, *fpout;     /* input/output file pointers */
   char **headv = NULL;    /* header comments */
-  int *dimin = NULL;      /* dimensions read */
-  int *dimout = NULL;     /* dimensions written */
-  int *out;               /* coordinates of current point in oufile */
+  int64_t *dimin = NULL;  /* dimensions read */
+  int64_t *dimout = NULL; /* dimensions written */
+  int64_t *out;           /* coordinates of current point in oufile */
+  double d;               /* dimension length */
   int headc, dimc;        /* number of comments, dimensions */
   char *encoding = NULL;  /* encoding type */
   unsigned char *samp;    /* sample unit */
-  int nsamp;              /* bytes per sample unit */
-  int n, nin;             /* number of bytes read and expected */
+  int64_t nsamp;          /* bytes per sample unit */
+  int64_t n, nin;         /* number of bytes read and expected */
   int i, ndim;            /* index and number of dimensions resampled */
-  int k, knext;           /* current sample read and next to be copied */
+  int64_t k, knext;       /* current sample read and next to be copied */
 
   /* Parse options. */
   opterr = 0;
@@ -227,8 +240,8 @@ main( int argc, char **argv )
   }
 
   /* Compute output dimensions. */
-  if ( !( dimout = (int *)calloc( dimc + 1, sizeof(int) ) ) ||
-       !( out = (int *)calloc( dimc + 1, sizeof(int) ) ) ) {
+  if ( !( dimout = (int64_t *)calloc( dimc + 1, sizeof(int64_t) ) ) ||
+       !( out = (int64_t *)calloc( dimc + 1, sizeof(int64_t) ) ) ) {
     lf_error( "memory error" );
     fclose( fpin );
     for ( i = 0; i < headc; i++ )
@@ -241,17 +254,23 @@ main( int argc, char **argv )
   }
   for ( i = 0, a = dims; i < dimc; i++ ) {
     if ( *a == 'x' )
-      dimout[i] = (int)( dimin[i]*strtod( a + 1, &b ) );
+      d = strtod( a + 1, &b )*dimin[i];
     else if ( *a == '/' ) {
-      double d = strtod( a + 1, &b );
-      dimout[i] = ( d > 0.0 ? (int)( dimin[i]/d ) : 0.0 );
+      d = strtod( a + 1, &b );
+      d = ( d > 0.0 ? dimin[i]/d : 0.0 );
     } else
-      dimout[i] = (int)( strtod( a, &b ) );
+      d = strtod( a, &b );
+    dimout[i] = ( d <= 0.0 ? 0 :
+		  ( (int64_t)( d ) > INT64_MAX ? -1 : (int64_t)( d ) ) );
     if ( b == a )
       break;
     if ( dimout[i] <= 0 ) {
-      lf_error( "dimension %d in %s gives non-positive output dimension",
-		i, dims );
+      if ( dimout[i] == 0 )
+	lf_error( "dimension %d in %s gives non-positive output dimension",
+		  i, dims );
+      else
+	lf_error( "dimension %d in %s gives output dimension greater than"
+		  " INT64_MAX", i, dims );
       fclose( fpin );
       for ( i = 0; i < headc; i++ )
 	free( headv[i] );
@@ -267,10 +286,15 @@ main( int argc, char **argv )
   /* Compute bytes in each sample unit. */
   ndim = i;
   nsamp = 1;
-  for ( ; i < dimc; i++ )
-    nsamp *= ( dimout[i] = dimin[i] );
-  if ( nsamp%8 ) {
-    lf_error( "sample unit is %d bits; must be a multiple of 8", nsamp );
+  for ( ; i < dimc; i++, nsamp *= ( dimout[i] = dimin[i] ) )
+    if ( nsamp > INT64_MAX/dimin[i] )
+      break;
+  if ( i < dimc || nsamp%8 ) {
+    if ( i < dimc )
+      lf_error( "sample unit exceeds INT64_MAX bits" );
+    else
+      lf_error( "sample unit is %lld bits; must be a multiple of 8",
+		(long long)( nsamp ) );
     fclose( fpin );
     for ( i = 0; i < headc; i++ )
       free( headv[i] );
@@ -293,9 +317,33 @@ main( int argc, char **argv )
     return 3;
   }
 
+  /* Check number of bits to be written to outfile. */
+  for ( i = 0, n = 1; i < dimc; i++, n *= dimout[i] )
+    if ( n > INT64_MAX/dimout[i] ) {
+      lf_error( "total number of output bits exceeds INT64_MAX" );
+      fclose( fpin );
+      for ( i = 0; i < headc; i++ )
+	free( headv[i] );
+      free( headv );
+      free( dimin );
+      free( dimout );
+      free( out );
+      return 3;
+    }
+
   /* Make a note of the number of bytes expected from infile. */
-  for ( i = 0, nin = 1; i < dimc; i++ )
-    nin *= dimin[i];
+  for ( i = 0, nin = 1; i < dimc; i++, nin *= dimin[i] )
+    if ( nin > INT64_MAX/dimin[i] ) {
+      lf_error( "total number of input bits exceeds INT64_MAX" );
+      fclose( fpin );
+      for ( i = 0; i < headc; i++ )
+	free( headv[i] );
+      free( headv );
+      free( dimin );
+      free( dimout );
+      free( out );
+      return 3;
+    }
   nin /= 8;
 
   /* Write output header. */
@@ -353,8 +401,8 @@ main( int argc, char **argv )
     /* Read up to specified point. */
     for ( ; k < knext; k++ )
       if ( ( n = bxReadData( encoding, samp, nsamp, fpin ) ) < nsamp ) {
-	lf_warning( "read %d bytes from %s, expected %d",
-		    k*nsamp + n, infile, nin );
+	lf_warning( "read %lld bytes from %s, expected %lld",
+		    (long long)( k*nsamp + n ), infile, (long long)( nin ) );
 	memset( samp + n, 0, ( nsamp - n )*sizeof(unsigned char) );
       }
 

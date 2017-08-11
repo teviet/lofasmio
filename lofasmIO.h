@@ -33,6 +33,7 @@ extern "C" {
 #endif
 
 #include <stdio.h>
+#include <stdint.h>
 
 /*
 <MARKDOWN>
@@ -109,7 +110,7 @@ stored in a dedicated header structure `lfb_hdr`, defined as below:
         double data_offset;
         double data_scale;
         char *data_type;
-        int dims[LFB_DMAX];
+        int64_t dims[LFB_DMAX];
     } lfb_hdr;
 
 where `LFB_MAX`=4 is the number of dimensions in a LoFASM filterbank.
@@ -133,7 +134,7 @@ typedef struct {
   double data_offset;
   double data_scale;
   char *data_type;
-  int dims[LFB_DMAX];
+  int64_t dims[LFB_DMAX];
 } lfb_hdr;
 /*
 <MARKDOWN>
@@ -153,6 +154,7 @@ its second argument or `stdout`.  Compile with linking flags
 
     #include <stdio.h>
     #include <stdlib.h>
+    #include <stdint.h>
     #include <unistd.h>
     #include <string.h>
     #include <math.h>
@@ -161,7 +163,7 @@ its second argument or `stdout`.  Compile with linking flags
     int
     main( int argc, char *argv[] )
     {
-        int i = 1, j, k;
+        int64_t i = 1, j, k;
         char *infile = NULL, *outfile = NULL, *label;
         const char *prefix = "magnitude of ";
         lfb_hdr head = {};
@@ -358,15 +360,15 @@ FILE *lfdopen( int fd, const char *mode );
 
 
 /* Generic ABX/BBX I/O function prototypes. */
-int
-bxRead( FILE *fp, int *headc, char ***headv, int *dimc, int **dimv,
+int64_t
+bxRead( FILE *fp, int *headc, char ***headv, int *dimc, int64_t **dimv,
 	char **encoding, void **data, int checks );
-int
+int64_t
 bxReadData( const char *encoding, void *buf, size_t n, FILE *fp );
 int
-bxWrite( FILE *fp, char **headv, const int *dimv,
+bxWrite( FILE *fp, char **headv, const int64_t *dimv,
 	 const char *encoding, const void *data, int checks );
-int
+int64_t
 bxWriteData( const char *encoding, const void *buf, size_t n,
 	     size_t nrow, FILE *fp );
 void

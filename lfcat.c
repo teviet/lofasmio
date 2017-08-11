@@ -186,12 +186,12 @@ ascendingTimes( const void *p1, const void *p2 )
 
 /* Array and comparison function for sorting data. */
 double *mddata = NULL; /* 2d array of doubles */
-int stride;            /* number of doubles in timestep */
+int64_t stride;        /* number of doubles in timestep */
 int
 ascendingDoubles( const void *p1, const void *p2 )
 {
-  double diff = mddata[ *( (int *)(p1) )*stride ];
-  diff -= mddata[ *( (int *)(p2) )*stride ];
+  double diff = mddata[ *( (int64_t *)(p1) )*stride ];
+  diff -= mddata[ *( (int64_t *)(p2) )*stride ];
   return ( diff > 0.0 ? 1 : ( diff < 0.0 ? -1 : 0 ) );
 }
 
@@ -220,31 +220,33 @@ do { \
 int
 main( int argc, char **argv )
 {
-  char opt;                  /* short option character */
-  int lopt;                  /* long option index */
-  float awarn = 2, aerr = 2; /* alignment warning/error thresholds */
-  int gaps = 0, dopad = 1;   /* number of gaps and whether to pad them */
-  double padd = 0.0;         /* pad value for gaps */
-  float padf = 0.0;          /* pad value if data are real32 */
-  int med = 0, lin = 0;      /* number of median steps; interpolate */
-  int med1 = 0, med2 = 0;    /* median steps on either side of gap */
-  FILE *fpin = NULL;         /* input file */
-  FILE *fpout = NULL;        /* output file */
-  int istd = 0;              /* whether input is stdin */
-  char *infile, *outfile;    /* input/output filenames */
-  lfb_hdr header = {};       /* single-input or output header */
-  unsigned char *row = NULL; /* single timestep of data */
-  unsigned char *gap = NULL; /* single missing timestep */
-  int nrow;                  /* number of bytes per row */
-  int nin;                   /* number of input files */
-  int *idx = NULL;           /* index array of sorted input files */
-  int *mddx = NULL;          /* index array of sorted data */
-  double *data = NULL;       /* row stored as doubles */
-  double *data1 = NULL;      /* median of preceding chunk */
-  double *data2 = NULL;      /* median of following chunk */
-  int i, j, k, klast, n;     /* indecies and size/return code */
-  double dt, t0;             /* timestep and offset */
-  double eps, epsmax = 0.0;  /* alignment errors */
+  char opt;                   /* short option character */
+  int lopt;                   /* long option index */
+  float awarn = 2, aerr = 2;  /* alignment warning/error thresholds */
+  int64_t gaps = 0;           /* number of gaps */
+  int dopad = 1;              /* whether to pad gaps */
+  double padd = 0.0;          /* pad value for gaps */
+  float padf = 0.0;           /* pad value if data are real32 */
+  int lin = 0;                /* whether to interpolate medians */
+  int64_t med = 0;            /* number of median steps */
+  int64_t med1 = 0, med2 = 0; /* median steps on either side of gap */
+  FILE *fpin = NULL;          /* input file */
+  FILE *fpout = NULL;         /* output file */
+  int istd = 0;               /* whether input is stdin */
+  char *infile, *outfile;     /* input/output filenames */
+  lfb_hdr header = {};        /* single-input or output header */
+  unsigned char *row = NULL;  /* single timestep of data */
+  unsigned char *gap = NULL;  /* single missing timestep */
+  int64_t nrow;               /* number of bytes per row */
+  int nin;                    /* number of input files */
+  int *idx = NULL;            /* index array of sorted input files */
+  int64_t *mddx = NULL;       /* index array of sorted data */
+  double *data = NULL;        /* row stored as doubles */
+  double *data1 = NULL;       /* median of preceding chunk */
+  double *data2 = NULL;       /* median of following chunk */
+  int64_t i, j, k, klast, n;  /* indecies and size/return code */
+  double dt, t0;              /* timestep and offset */
+  double eps, epsmax = 0.0;   /* alignment errors */
 
   /* Parse options. */
   while ( ( opt = getopt_long( argc, argv, short_opts, long_opts, &lopt ) )
@@ -380,8 +382,8 @@ main( int argc, char **argv )
     }
     for ( i = 0; i < header.dims[0] && !feof( fpin ); i++ ) {
       if ( ( n = fread( row, 1, nrow, fpin ) ) < nrow )
-	lf_warning( "read %d rows from %s, expected %d", i, infile,
-		    header.dims[0] );
+	lf_warning( "read %lld rows from %s, expected %lld", (long long)( i ),
+		    infile, (long long)( header.dims[0] ) );
       if ( n > 0 && fwrite( row, 1, n, fpout ) < n ) {
 	lf_error( "error writing to %s", outfile );
 	CLEANEXIT( 2 );
@@ -468,11 +470,16 @@ main( int argc, char **argv )
   for ( i = 1; i < nin; i++ ) {
     lfb_hdr *h = headers + idx[i];
     double kf = ( h->dim1_start - t0 )/dt;
-    k = (int)round( kf );
+    if ( round( kf ) > INT64_MAX ) {
+      lf_error( "start of file %d more than INT4_MAX steps from start of"
+		" file %d", idx[i-1], idx[i] );
+      CLEANEXIT( 3 );
+    }
+    k = (int64_t)round( kf );
     if ( k < klast ) {
       lf_error( "overlap between files %d and %d from argument list\n\t"
 		"(ordered %d and %d after sorting)",
-		idx[i-1], idx[i], i-1, i );
+		idx[i-1], idx[i], (int)( i ) - 1, (int)( i ) );
       CLEANEXIT( 3 );
     }
     if ( k > klast ) {
@@ -480,18 +487,23 @@ main( int argc, char **argv )
       if ( !dopad ) {
 	lf_error( "gap between files %d and %d from argument list\n\t"
 		  "(ordered %d and %d after sorting)",
-		  idx[i-1], idx[i], i-1, i );
+		  idx[i-1], idx[i], (int)( i ) - 1, (int)( i ) );
 	CLEANEXIT( 3 );
       }
     }
     if ( ( eps = fabs( k - kf ) ) > epsmax )
       epsmax = eps;
     klast = k + h->dims[0];
+    if ( round( klast ) > INT64_MAX ) {
+      lf_error( "end of file %d more than INT4_MAX steps from start of"
+		" file %d", idx[i-1], idx[i] );
+      CLEANEXIT( 3 );
+    }
     kf += h->dim1_span/dt;
     k = (int)round( kf );
     if ( k != klast ) {
       lf_error( "misalignment in file %d from argument list\n\t"
-		"(ordered %d after sorting)", idx[i], i );
+		"(ordered %d after sorting)", idx[i], (int)( i ) );
       CLEANEXIT( 3 );
     }
     if ( ( eps = fabs( k - kf ) ) > epsmax )
@@ -505,8 +517,8 @@ main( int argc, char **argv )
   else if ( epsmax > 0.0 )
     lf_info( "max misalignment %e", epsmax );
   if ( gaps > 0 )
-    lf_info( "total gaps %d/%d (%f%%)", gaps, klast,
-	     (float)( 100.0*gaps )/klast );
+    lf_info( "total gaps %lld/%lld (%f%%)", (long long)( gaps ),
+	     (long long)( klast ), (float)( 100.0*gaps )/klast );
 
   /* Write output header. */
   memcpy( &header, headers + idx[0], sizeof(lfb_hdr) );
@@ -551,7 +563,7 @@ main( int argc, char **argv )
 	memset( gap, 0, nrow*sizeof(unsigned char) );
 	med = 0;
       }
-      if ( !( mddx = (int *)malloc( 2*med*sizeof(int) ) ) ||
+      if ( !( mddx = (int64_t *)malloc( 2*med*sizeof(int64_t) ) ) ||
 	   !( data = (double *)malloc( nrow ) ) ||
 	   ( lin && ( !( data1 = (double *)malloc( nrow ) ) ||
 		      !( data2 = (double *)malloc( nrow ) ) ) ) ) {
@@ -577,9 +589,9 @@ main( int argc, char **argv )
   for ( i = k = 0; i < nin; i++ ) {
     lfb_hdr *h = headers + idx[i];         /* this file's header */
     double kf = ( h->dim1_start - t0 )/dt; /* initial index as float */
-    int kstart = (int)round( kf );         /* initial index */
-    int kend = kstart + h->dims[0];        /* final index */
-    int kstop;                             /* last index before median chunk */
+    int64_t kstart = (int64_t)round( kf ); /* initial index */
+    int64_t kend = kstart + h->dims[0];    /* final index */
+    int64_t kstop;                         /* last index before median chunk */
 
     /* Reopen input file and skip to data (if not stdin). */
     if ( !strcmp( argv[optind+idx[i]], "-" ) ) {
@@ -620,8 +632,8 @@ main( int argc, char **argv )
       else {
 	if ( ( n = fread( gap + med1*nrow, 1, med2*nrow, fpin ) )
 	     < med2*nrow ) {
-	  lf_info( "read %d bytes from %s, expected %d",
-		   n, infile, ( kend - kstart )*nrow );
+	  lf_info( "read %lld bytes from %s, expected %lld", (long long)( n ),
+		   infile, (long long)( ( kend - kstart )*nrow ) );
 	  memset( gap + med1*nrow + n, 0, med2*nrow - n );
 	}
 
@@ -633,7 +645,7 @@ main( int argc, char **argv )
 	    for ( n = 0; n < med2; n++ )
 	      mddx[n] = n;
 	    mddata = (double *)( gap + med1*nrow + 8*j );
-	    qsort( mddx, med2, sizeof(int), ascendingDoubles );
+	    qsort( mddx, med2, sizeof(int64_t), ascendingDoubles );
 	    data2[j] = mddata[ mddx[med1/2]*stride ];
 	  }
 	  for ( ; k < kstart; k++ ) {
@@ -653,7 +665,7 @@ main( int argc, char **argv )
 	    for ( n = 0; n < med1 + med2; n++ )
 	      mddx[n] = n;
 	    mddata = (double *)( gap + 8*j );
-	    qsort( mddx, med1 + med2, sizeof(int), ascendingDoubles );
+	    qsort( mddx, med1 + med2, sizeof(int64_t), ascendingDoubles );
 	    data[j] = mddata[ mddx[ ( med1 + med2 )/2 ]*stride ];
 	  }
 	  for ( ; k < kstart; k++ )
@@ -677,8 +689,9 @@ main( int argc, char **argv )
     /* Copy (rest of) input file. */
     for ( ; k < kstop && !feof( fpin ); k++ ) {
       if ( ( n = fread( row, 1, nrow, fpin ) ) < nrow ) {
-	lf_info( "read %d bytes from %s, expected %d",
-		 ( k - kstart )*nrow + n, infile, ( kend - kstart )*nrow );
+	lf_info( "read %lld bytes from %s, expected %lld",
+		 (long long)( ( k - kstart )*nrow + n ), infile,
+		 (long long)( ( kend - kstart )*nrow ) );
 	memset( row + n, 0, nrow - n );
       }
       if ( fwrite( row, 1, nrow, fpout ) < nrow ) {
@@ -700,8 +713,9 @@ main( int argc, char **argv )
     if ( med ) {
       med1 = med2;
       if ( ( n = fread( gap, 1, med1*nrow, fpin ) ) < med1*nrow ) {
-	lf_info( "read %d bytes from %s, expected %d",
-		 ( k - kstart )*nrow + n, infile, ( kend - kstart )*nrow );
+	lf_info( "read %lld bytes from %s, expected %lld",
+		 (long long)( ( k - kstart )*nrow + n ), infile,
+		 (long long)( ( kend - kstart )*nrow ) );
 	memset( gap + n, 0, med1*nrow - n );
       }
       if ( fwrite( gap, 1, med1*nrow, fpout ) < med1*nrow ) {
@@ -717,7 +731,7 @@ main( int argc, char **argv )
 	  for ( n = 0; n < med1; n++ )
 	    mddx[n] = n;
 	  mddata = (double *)( gap + 8*j );
-	  qsort( mddx, med1, sizeof(int), ascendingDoubles );
+	  qsort( mddx, med1, sizeof(int64_t), ascendingDoubles );
 	  data1[j] = mddata[ mddx[med1/2]*stride ];
 	}
     }

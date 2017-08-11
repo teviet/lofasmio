@@ -44,12 +44,14 @@ of dimensions in the array:
 followed immediately by a newline `\n`.  The whitespace separating the
 tokens is arbitrary so long as it does not include a newline: a parser
 can safely read the entire line before counting tokens to determine
-the value of _N_.  The _dim#_ tokens are positive integers giving the
-length of that dimension of the array.  The _encoding_ token
-identifies how the bits in the array are rendered as ASCII: see below.
-There should be no whitespace between the _encoding_ token and the
-newline character, and the encoded data block begins on the byte
-following the newline character.
+the value of _N_.  The _dim#_ tokens are positive decimal integers
+giving the length of that dimension of the array: the product of these
+values should not exceed the maximum value of a 64-bit signed integer
+(9223372036854775807).  The _encoding_ token identifies how the bits
+in the array are rendered as ASCII: see below.  There should be no
+whitespace between the _encoding_ token and the newline character, and
+the encoded data block begins on the byte following the newline
+character.
 
 ### Data
 
@@ -169,12 +171,14 @@ of dimensions in the array:
 followed immediately by a newline `\n`.  The whitespace separating the
 tokens is arbitrary so long as it does not include a newline: a parser
 can safely read the entire line before counting tokens to determine
-the value of _N_.  The _dim#_ tokens are positive integers giving the
-length of that dimension of the array.  The _encoding_ token
-identifies how the bits in the array are recorded in the _data_ block:
-see below.  There should be no whitespace between the _encoding_ token
-and the newline character, and the encoded data block begins on the
-byte following the newline character.
+the value of _N_.  The _dim#_ tokens are positive decimal integers
+giving the length of that dimension of the array: the product of these
+values should not exceed the maximum value of a 64-bit signed integer
+(9223372036854775807).  The _encoding_ token identifies how the bits
+in the array are recorded in the _data_ block: see below.  There
+should be no whitespace between the _encoding_ token and the newline
+character, and the encoded data block begins on the byte following the
+newline character.
 
 ### Data
 
@@ -308,11 +312,13 @@ array and the representation of the bit sequence:
 > _dim1_ ... _dimN_ _encoding_  
 > _data_
 
-where _dim1_ through _dimN_ are base-10 integers in ordinary ASCII
-text specifying the lengths of each array dimension, and _encoding_ is
-an ASCII string specifying the method of representing the bit data
-(see below), followed immediately by a newline `\n` character.  The
-encoded data begins on the byte immediately following the newline.
+where _dim1_ through _dimN_ are positive decimal integers in ordinary
+ASCII text specifying the lengths of each array dimension (their
+product not not to exceed the maximum value of a 64-bit signed
+integer, or 9223372036854775807), and _encoding_ is an ASCII string
+specifying the method of representing the bit data (see below),
+followed immediately by a newline `\n` character.  The encoded data
+begins on the byte immediately following the newline.
 
 The metadata line may be preceded by zero or more lines of comments,
 where each comment line begins with an ASCII `%` character.  Comments
@@ -338,7 +344,7 @@ outermost).
 ### ABX format
 
 Although the BBX format is the LoFASM standard, in situations where
-terminal- or email-safe files are required, there is the ASCII Bit
+terminal- or email-safe files are required, one may use the ASCII Bit
 Array (ABX) format.  Files conventionally have a `.abx` filename
 extension, the first header comment line is `%ABX`, and the _encoding_
 is one of several ASCII encoding schemes.  See abx(5) documentation

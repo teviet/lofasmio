@@ -247,12 +247,12 @@ main( int argc, char **argv )
   int done = 0;                       /* whether finished reading cmap */
   int cmapstd = 0;                    /* whether cmap was read from stdin */
   lfb_hdr head = {};                  /* lofasm header */
-  int dims[LFB_DMAX] = {};            /* saved input dimensions */
-  int i, iin, jin, iout, j;           /* index in infile and outfile */
+  int64_t dims[LFB_DMAX] = {};        /* saved input dimensions */
+  int64_t i, iin, jin, iout, j;       /* index in infile and outfile */
   int k, m;                           /* indecies in colourmap */
   double f;                           /* fractional position within cmap */
   double d, dmin, dmax;               /* minimum and maximum scaled values */
-  int n, nin, ndat, nout;             /* data per row in infile and outfile */
+  int64_t n, nin, ndat, nout;         /* data per row in infile and outfile */
   char *a, *b;                        /* pointers within a string */
   char **c;                           /* pointer to colourmaps */
 
@@ -465,42 +465,35 @@ main( int argc, char **argv )
   head.dims[3] = 8;
   if ( yarg ) {
     double y = strtod( yarg + ( strchr( "x/", yarg[0] ) ? 1 : 0 ), &b );
-    if ( b[0] || y <= 0.0 ) {
+    if ( yarg[0] == 'x' )
+      y = dims[0]*y;
+    else if ( yarg[0] == '/' )
+      y = dims[0]/y;
+    y += 0.5;
+    if ( b[0] || y <= 1.0 || y > INT64_MAX ) {
       lf_error( "bad argument %s to -y, --rows", yarg );
       fclose( fpin );
       free( cnan );
       lfbxFree( &head );
       return 1;
     }
-    if ( yarg[0] == 'x' )
-      head.dims[0] = (int)( dims[0]*y + 0.5 );
-    else if ( yarg[0] == '/' )
-      head.dims[0] = (int)( dims[0]/y + 0.5 );
-    else
-      head.dims[0] = (int)( y + 0.5 );
+    head.dims[0] = (int64_t)( y );
   }
   if ( xarg ) {
     double x = strtod( xarg + ( strchr( "x/", xarg[0] ) ? 1 : 0 ), &b );
-    if ( b[0] || x <= 0.0 ) {
+    if ( xarg[0] == 'x' )
+      x = dims[1]*x;
+    else if ( x != 0.0 && yarg[0] == '/' )
+      x = dims[1]/x;
+    x += 0.5;
+    if ( b[0] || x < 1.0 || x > INT64_MAX ) {
       lf_error( "bad argument %s to -x, --cols", xarg );
       fclose( fpin );
       free( cnan );
       lfbxFree( &head );
       return 1;
     }
-    if ( xarg[0] == 'x' )
-      head.dims[1] = (int)( dims[1]*x + 0.5 );
-    else if ( xarg[0] == '/' )
-      head.dims[1] = (int)( dims[1]/x + 0.5 );
-    else
-      head.dims[1] = (int)( x + 0.5 );
-  }
-  if ( head.dims[0] < 1 || head.dims[1] < 1 ) {
-    lf_error( "bad output dimensions" );
-    fclose( fpin );
-    free( cnan );
-    lfbxFree( &head );
-    return 1;
+    head.dims[1] = (int64_t)( x );
   }
 
   /* Check output type. */
@@ -520,6 +513,13 @@ main( int argc, char **argv )
   }
 
   /* Allocate data. */
+  if ( dims[1] > INT64_MAX/dims[2] || head.dims[1] > INT64_MAX/3 ) {
+    lf_error( "dimensions out of range" );
+    fclose( fpin );
+    free( cnan );
+    lfbxFree( &head );
+    return 1;
+  }
   nin = dims[1]*dims[2];
   ndat = head.dims[1]*2;
   nout = head.dims[1]*3;
@@ -592,7 +592,7 @@ main( int argc, char **argv )
     fprintf( fpout, "%%%%Orientation: Portrait\n"
 	     "%%%%Pages: 0\n"
 	     "%%%%LanguageLevel: 2\n"
-	     "%%%%BoundingBox: 0 0 %i %i\n"
+	     "%%%%BoundingBox: 0 0 %lld %lld\n"
 	     "%%%%EndComments\n\n"
 	     "%%%%BeginProlog\n"
 	     "/raw256 {\n"
@@ -600,7 +600,8 @@ main( int argc, char **argv )
 	     "  [ 4 index 0 0 6 index dup neg exch 0 exch ] exch\n"
 	     "  currentfile exch false exch colorimage\n"
 	     "} def\n"
-	     "%%%%EndProlog\n", head.dims[1], head.dims[0] );
+	     "%%%%EndProlog\n",
+	     (long long)( head.dims[1] ), (long long)( head.dims[0] ) );
   }
 
   /* Write BX output header. */
@@ -630,8 +631,9 @@ main( int argc, char **argv )
     if ( !feof( fpin ) ) {
       for ( ; i < iin; i++ )
 	if ( ( n = fread( rowin, sizeof(double), nin, fpin ) ) < nin ) {
-	  lf_warning( "read %d numbers from %s, expected %d",
-		      ( i + 1 )*nin + n, infile, dims[0]*nin );
+	  lf_warning( "read %lld numbers from %s, expected %lld",
+		      (long long)( ( i + 1 )*nin + n ), infile,
+		      (long long)( dims[0]*nin ) );
 	  memset( rowin + n, 0, ( nin - n )*sizeof(double) );
 	}
     } else

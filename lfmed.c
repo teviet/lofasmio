@@ -160,12 +160,12 @@ static const struct option long_opts[] = {
    ddata[stride] to the next, and so on.  The comparison is written so
    that NaNs will be sorted below anything else. */
 double *ddata;
-int stride;
+int64_t stride;
 int
 ascend( const void *p1, const void *p2 )
 {
-  double diff = ddata[ *( (int *)(p1) )*stride ];
-  diff -= ddata[ *( (int *)(p2) )*stride ];
+  double diff = ddata[ *( (int64_t *)(p1) )*stride ];
+  diff -= ddata[ *( (int64_t *)(p2) )*stride ];
   return ( diff > 0.0 ? 1 : ( diff == 0.0 ? 0 : -1 ) );
 }
 
@@ -174,15 +174,16 @@ main( int argc, char **argv )
 {
   char opt;                /* option character */
   int lopt;                /* long option index */
-  int r1 = 0, r2 = 0;      /* width along each dimension */
+  unsigned long long r1 = 0, r2 = 0; /* width along each dimension */
+  char *tail;              /* pointer within option argument */
   char *infile, *outfile;  /* input/output file names */
   FILE *fpin, *fpout;      /* input/output file pointers */
-  int i, imin, imax;       /* index and range in columns */
-  int j, jmin, jmax;       /* index and range in rows */
-  int n, k;                /* more indecies */
+  int64_t i, imin, imax;   /* index and range in columns */
+  int64_t j, jmin, jmax;   /* index and range in rows */
+  int64_t n, k;            /* more indecies */
   lfb_hdr head = {};       /* file header */
   double *dat, *row, *out; /* data block, row, and fitered output */
-  int *idx;                /* sorting index */
+  int64_t *idx;            /* sorting index */
 
   /* Parse options. */
   while ( ( opt = getopt_long( argc, argv, short_opts, long_opts, &lopt ) )
@@ -207,13 +208,15 @@ main( int argc, char **argv )
       lofasm_verbosity = atoi( optarg );
       break;
     case 'y':
-      if ( sscanf( optarg, "%d", &r1 ) < 1 || r1 < 0 ) {
+      r1 = strtoull( optarg, &tail, 10 );
+      if ( tail == optarg || r1 > INT64_MAX ) {
 	lf_error( "bad -y, --cols argument %s", optarg );
 	return 1;
       }
       break;
     case 'x':
-      if ( sscanf( optarg, "%d", &r2 ) < 1 || r2 < 0 ) {
+      r2 = strtoull( optarg, &tail, 10 );
+      if ( tail == optarg || r2 > INT64_MAX ) {
 	lf_error( "bad -x, --rows argument %s", optarg );
 	return 1;
       }
@@ -296,7 +299,7 @@ main( int argc, char **argv )
   dat = (double *)malloc( n*head.dims[1]*sizeof(double) );
   n = ( r2 > 0 && head.dims[1] > n ? head.dims[1] : n );
   out = (double *)malloc( n*sizeof(double) );
-  idx = (int *)malloc( n*sizeof(int) );
+  idx = (int64_t *)malloc( n*sizeof(int64_t) );
   if ( !dat || !out || !idx ) {
     lf_error( "memory error" );
     fclose( fpin );
@@ -346,7 +349,8 @@ main( int argc, char **argv )
   if ( r1 > 0 ) {
     n = head.dims[0]*head.dims[1];
     if ( ( i = fread( dat, sizeof(double), n, fpin ) ) < n ) {
-      lf_warning( "read %d data from %s, expected %d", i, infile, n );
+      lf_warning( "read %lld data from %s, expected %lld",
+		  (long long)( i ), infile, (long long)( n ) );
       memset( dat + i, 0, ( n - i )*sizeof(double) );
     }
     stride = head.dims[1];
@@ -357,7 +361,7 @@ main( int argc, char **argv )
 	ddata = dat + imin*head.dims[1] + j;
 	for ( k = 0; k < imax - imin; k++ )
 	  idx[k] = k;
-	qsort( idx, imax - imin, sizeof(int), ascend );
+	qsort( idx, imax - imin, sizeof(int64_t), ascend );
 	out[i] = ddata[ ( idx[ ( imax - imin )/2 ] )*stride ];
       }
       for ( i = 0; i < head.dims[0]; i++ )
@@ -376,8 +380,9 @@ main( int argc, char **argv )
     else {
       if ( !feof( fpin ) ) {
 	if ( ( j = fread( dat, sizeof(double), n, fpin ) ) < n ) {
-	  lf_warning( "read %d data from %s, expected %d", i*n + j,
-		     infile, head.dims[0]*n );
+	  lf_warning( "read %lld data from %s, expected %lld",
+		      (long long)( i*n + j ), infile,
+		      (long long)( head.dims[0]*n ) );
 	  memset( dat + j, 0, ( n - j )*sizeof(double) );
 	}
 	row = dat;
@@ -395,7 +400,7 @@ main( int argc, char **argv )
 	ddata = row + jmin;
 	for ( k = 0; k < jmax - jmin; k++ )
 	  idx[k] = k;
-	qsort( idx, jmax - jmin, sizeof(int), ascend );
+	qsort( idx, jmax - jmin, sizeof(int64_t), ascend );
 	out[j] = ddata[ ( idx[ ( jmax - jmin )/2 ] ) ];
       }
     }

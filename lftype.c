@@ -180,8 +180,9 @@ do { \
   for ( i = 0; i < nrows && !feof( fpin ); i++ ) { \
     if ( ( n = bxReadData( encoding, (unsigned char *)(from), ne*ni, fpin ) ) \
 	 < ne*ni ) { \
-      lf_warning( "read %d bytes from %s, expected %d", i*ne*ni + n, \
-	          infile, nrows*ne*ni ); \
+      lf_warning( "read %lld bytes from %s, expected %lld", \
+	          (long long)( i*ne*ni + n ), infile, \
+                  (long long)( nrows*ne*ni ) ); \
       memset( (unsigned char *)(from) + n, 0, ne*ni - n ); \
     } \
     for ( j = 0; j < ne; j++ ) \
@@ -216,11 +217,11 @@ main( int argc, char **argv )
   char intype[7], outtype[7]; /* input/output data types */
   FILE *fpin, *fpout;         /* input/output file pointers */
   char **headv;               /* header comments */
-  int *dimv;                  /* dimensions */
+  int64_t *dimv;              /* dimensions */
   int headc, dimc;            /* number of comments, dimensions */
   char *encoding;             /* encoding type */
-  int i, j, nrows;            /* indecies and number of rows */
-  int ne, nr = 0, n;          /* effective, true, and read elements per row */
+  int64_t i, j, nrows;        /* indecies and number of rows */
+  int64_t ne, nr = 0, n;      /* effective, true, and read elements per row */
   char *c;                    /* pointer within header comment */
   /* Row data cast to various types. */
   char *c8row;
@@ -395,8 +396,8 @@ main( int argc, char **argv )
   for ( c = intype; !isdigit( (int)( *c ) ); c++ )
     ;
   if ( atoi( c ) != dimv[dimc-1] ) {
-    lf_error( "input type %s does not match bit depth %d", intype,
-	      dimv[dimc-1] );
+    lf_error( "input type %s does not match bit depth %lld", intype,
+	      (long long)( dimv[dimc-1] ) );
     fclose( fpin );
     for ( i = 0; i < headc; i++ )
       free( headv[i] );
@@ -425,6 +426,20 @@ main( int argc, char **argv )
   for ( c = outtype; !isdigit( (int)( *c ) ); c++ )
     ;
   dimv[dimc-1] = atoi( c );
+
+  /* Check that type conversion has not pushed us above bit limit. */
+  for ( i = 0, n = 1; i < dimc; i++, n *= dimv[i] )
+    if ( n > INT64_MAX/dimv[i] ) {
+      lf_error( "number of bits exceeds INT64_MAX" );
+      fclose( fpin );
+      for ( i = 0; i < headc; i++ )
+	if ( headv[i] )
+	  free( headv[i] );
+      free( headv );
+      free( dimv );
+      free( encoding );
+      return 4;
+    }
 
   /* Write output header. */
   if ( !outfile ) {

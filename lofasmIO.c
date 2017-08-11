@@ -25,6 +25,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 #include <ctype.h>
 #include <math.h>
@@ -258,7 +259,8 @@ typedef struct tagstrlist_t {
 
 `#include "lofasmIO.h"`
 
-`int bxReadData( const char *`_encoding_`, void *`_buf_`, size_t` _n_`, FILE *`_fp_ `);`
+`int64_t bxReadData( const char *`_encoding_`, void *`_buf_`, size_t` _n_`,
+                    FILE *`_fp_ `);`
 
 ## DESCRIPTION
 
@@ -282,16 +284,26 @@ abx(5),
 bbx(5)
 
 </MARKDOWN> */
-int
+int64_t
 bxReadData( const char *encoding, void *buf, size_t n, FILE *fp )
 {
   unsigned char *ubuf = buf;
-  if ( !encoding || !buf || !fp )
+  if ( !encoding || !buf || !fp || n > INT64_MAX/8 ) {
+    if ( !encoding )
+      lf_error( "null encoding pointer" );
+    if ( !buf )
+      lf_error( "null storage buffer pointer" );
+    if ( !fp )
+      lf_error( "null file pointer" );
+    if ( n > INT64_MAX/8 )
+      lf_error( "requested number of bits 8*%lu exceeds INT64_MAX", n );
     return -1;
+  }
   if ( !strcmp( encoding, "raw256" ) )
     return fread( ubuf, sizeof(unsigned char), n, fp );
   else if ( !strcmp( encoding, "raw16" ) ) {
-    int i, ch, x1, x2; /* index, next character and hex values */
+    size_t i;       /* index */
+    int ch, x1, x2; /* next character and hex values */
     for ( i = 0; i < n; i++ ) {
       do
 	ch = fgetc( fp );
@@ -306,23 +318,25 @@ bxReadData( const char *encoding, void *buf, size_t n, FILE *fp )
       ubuf[i] = 16*x1 + x2;
     }
   } else if ( !strcmp( encoding, "float" ) ) {
-    int i;   /* index */
-    float f; /* next float value */
+    size_t i; /* index */
+    float f;  /* next float value */
     for ( i = 0; i < n/4; i++ ) {
       if ( fscanf( fp, "%f", &f ) != 1 )
 	return i;
       memcpy( ubuf + 4*i, &f, 4*sizeof(unsigned char) );
     }
   } else if ( !strcmp( encoding, "double" ) ) {
-    int i;    /* index */
+    size_t i; /* index */
     double d; /* next double value */
     for ( i = 0; i < n/8; i++ ) {
       if ( fscanf( fp, "%lf", &d ) != 1 )
 	return i;
       memcpy( ubuf + 8*i, &d, 8*sizeof(unsigned char) );
     }
-  } else
+  } else {
+    lf_error( "unrecognized encoding: %s", encoding );
     return -1;
+  }
   return n;
 }
 
@@ -339,8 +353,9 @@ bxReadData( const char *encoding, void *buf, size_t n, FILE *fp )
 
 `#include "lofasmIO.h"`
 
-`int bxRead( lfile` _fp_`, int *`_headc_`, char ***`_headv_`, int *`_dimc_`, int **`_dimv_`,
-            char **`_encoding_`, void **`_data_`, int` _checks_ ` );`
+`int64_t bxRead( lfile` _fp_`, int *`_headc_`, char ***`_headv_`, int *`_dimc_`,
+                int64_t **`_dimv_`, char **`_encoding_`, void **`_data_`,
+                int` _checks_ ` );`
 
 ## DESCRIPTION
 
@@ -422,8 +437,8 @@ should be a bitwise-or of one or more of the following flags
 
 ## RETURN VALUE
 
-On success, the function returns the actual number of bits read and
-stored in `*`_data_, which may be less than L[0]\*...\*L[N-1] on a
+On success, the function returns the actual number of bytes read and
+stored in `*`_data_, which may be less than L[0]\*...\*L[N-1]/8 on a
 premature end of data.  This does not necessarily reflect an error,
 and the output is deterministic (remaining data are set to zero): a
 file may deliberately end early if the remaining data are zero.  A
@@ -452,18 +467,18 @@ abx(5),
 bbx(5)
 
 </MARKDOWN> */
-int
-bxRead( FILE *fp, int *headc, char ***headv, int *dimc, int **dimv,
+int64_t
+bxRead( FILE *fp, int *headc, char ***headv, int *dimc, int64_t **dimv,
 	char **encoding, void **data, int checks )
 {
   unsigned char *dat = NULL; /* internal copy of *data */
   char *enc = NULL;          /* internal copy of *encoding */
   int hc = 0, dc = 0;        /* internal copies of *headc, *dimc */
-  int i, n, nb;              /* index, counter, and total number of bits */
-  int k = 0;                 /* number of bits read */
+  int64_t i, n, nb;          /* index, counter, and total number of bits */
+  int64_t k = 0;             /* number of bytes read */
   char *line;                /* current line */
   char *a, *b;               /* pointers within current line */
-  int *dims;                 /* dimensions */
+  int64_t *dims;             /* dimensions */
   int len, max = 1024;       /* current and allocated length of line or dims */
   strlist_t head = {};       /* head of list of comment strings */
   strlist_t *here, *prev;    /* pointers to list of comment strings */
@@ -472,12 +487,27 @@ bxRead( FILE *fp, int *headc, char ***headv, int *dimc, int **dimv,
 
   /* Check arguments. */
   if ( !fp || !dimv || *dimv || ( encoding && *encoding ) ||
-       ( data && *data ) || ( headv && *headv ) )
+       ( data && *data ) || ( headv && *headv ) ) {
+    if ( !fp )
+      lf_error( "null file pointer" );
+    if ( !dimv )
+      lf_error( "null dimv handle" );
+    if ( *dimv )
+      lf_error( "dimv handle points to non-NULL pointer" );
+    if ( encoding && *encoding )
+      lf_error( "encoding handle points to non-NULL pointer" );
+    if ( data && *data )
+      lf_error( "data handle points to non-NULL pointer" );
+    if ( headv && *headv )
+      lf_error( "headv handle points to non-NULL pointer" );
     return -2;
+  }
 
   /* Read header. */
-  if ( !( line = (char *)malloc( max*sizeof(char) ) ) )
+  if ( !( line = (char *)malloc( max*sizeof(char) ) ) ) {
+    lf_error( "memory error" );
     return -3;
+  }
   here = &head;
   while ( !feof( fp ) ) {
     /* Read an entire line, lengthening as necessary. */
@@ -495,6 +525,7 @@ bxRead( FILE *fp, int *headc, char ***headv, int *dimc, int **dimv,
 	    free( prev->str );
 	    free( prev );
 	  }
+	  lf_error( "memory error" );
 	  return -3;
 	}
 	line = temp;
@@ -514,6 +545,7 @@ bxRead( FILE *fp, int *headc, char ***headv, int *dimc, int **dimv,
 	free( prev->str );
 	free( prev );
       }
+      lf_error( "memory error" );
       return -3;
     }
     here = here->next;
@@ -522,20 +554,21 @@ bxRead( FILE *fp, int *headc, char ***headv, int *dimc, int **dimv,
 
   /* Read dimensions from first non-comment line. */
   max = 1024;
-  if ( !( dims = (int *)malloc( max*sizeof(int) ) ) ) {
+  if ( !( dims = (int64_t *)malloc( max*sizeof(int64_t) ) ) ) {
     free( line );
     for ( prev = here = head.next; here; prev = here ) {
       here = here->next;
       free( prev->str );
       free( prev );
     }
+    lf_error( "memory error" );
     return -3;
   }
-  for ( dc = 0, a = line, b = NULL; 1; dc++, a = b ) {
-    dims[dc] = strtol( a, &b, 0 );
+  for ( dc = 0, a = line; 1; dc++, a = b ) {
+    unsigned long long d = strtoull( a, &b, 10 );
     if ( b == a )
       break;
-    if ( dims[dc] <= 0 ) {
+    if ( d < 1 || d > INT64_MAX ) {
       free( line );
       free( dims );
       for ( prev = here = head.next; here; prev = here ) {
@@ -543,10 +576,12 @@ bxRead( FILE *fp, int *headc, char ***headv, int *dimc, int **dimv,
 	free( prev->str );
 	free( prev );
       }
+      lf_error( "dimension[%d] = %llu out of range", dc, d );
       return -1;
     }
+    dims[dc] = d;
     if ( dc >= max - 1 ) {
-      int *temp = (int *)realloc( dims, 2*max );
+      int64_t *temp = (int64_t *)realloc( dims, 2*max*sizeof(int64_t) );
       if ( !temp ) {
 	free( line );
 	free( dims );
@@ -555,6 +590,7 @@ bxRead( FILE *fp, int *headc, char ***headv, int *dimc, int **dimv,
 	  free( prev->str );
 	  free( prev );
 	}
+	lf_error( "memory error" );
 	return -3;
       }
       dims = temp;
@@ -562,8 +598,20 @@ bxRead( FILE *fp, int *headc, char ***headv, int *dimc, int **dimv,
     }
   }
   dims[dc] = 0;
-  for ( i = 0, nb = 1; i < dc; i++ )
+  for ( i = 0, nb = 1; i < dc; i++ ) {
+    if ( nb > INT64_MAX/dims[i] ) {
+      free( line );
+      free( dims );
+      for ( prev = here = head.next; here; prev = here ) {
+	here = here->next;
+	free( prev->str );
+	free( prev );
+      }
+      lf_error( "total size of array exceeds INT64_MAX bits" );
+      return -3;
+    }
     nb *= dims[i];
+  }
 
   /* Get encoding name. */
   while ( isspace( (int)( *a ) ) )
@@ -579,6 +627,7 @@ bxRead( FILE *fp, int *headc, char ***headv, int *dimc, int **dimv,
       free( prev->str );
       free( prev );
     }
+    lf_error( "encoding token '%s' not followed by newline", a );
     return -1;
   }
   *b = '\0';
@@ -590,6 +639,7 @@ bxRead( FILE *fp, int *headc, char ***headv, int *dimc, int **dimv,
       free( prev->str );
       free( prev );
     }
+    lf_error( "memory error" );
     return -3;
   }
   strcpy( enc, a );
@@ -617,6 +667,11 @@ bxRead( FILE *fp, int *headc, char ***headv, int *dimc, int **dimv,
 	free( prev->str );
 	free( prev );
       }
+      if ( !type )
+	lf_error( "REQUIRE_ID: file type (ascii/binary) not specified" );
+      else
+	lf_error( "REQUIRE_ID: encoding '%s' not recognized for %s file type",
+		  enc, ( type == 'a' ? "ascii" : "binary" ) );
       return -4*BX_REQUIRE_ID;
     }
     if ( ( checks&BX_CHECK_ID ) &&
@@ -631,6 +686,8 @@ bxRead( FILE *fp, int *headc, char ***headv, int *dimc, int **dimv,
 	free( prev->str );
 	free( prev );
       }
+      lf_error( "CHECK_ID: encoding '%s' not recognized of %s file type",
+		enc, ( type == 'a' ? "ascii" : "binary" ) );
       return -4*BX_CHECK_ID;
     }
   }
@@ -643,6 +700,8 @@ bxRead( FILE *fp, int *headc, char ***headv, int *dimc, int **dimv,
       free( prev->str );
       free( prev );
     }
+    lf_error( "incorrect number of bits %lld for encoding '%s'",
+	      (long long)( dims[dc-1] ), enc );
     return -1;
   }
 
@@ -657,11 +716,12 @@ bxRead( FILE *fp, int *headc, char ***headv, int *dimc, int **dimv,
 	free( prev->str );
 	free( prev );
       }
+      lf_error( "memory error" );
       return -3;
     }
 
     /* Read data. */
-    if ( ( k = 8*bxReadData( enc, dat, n, fp ) ) < 0 ) {
+    if ( ( k = bxReadData( enc, dat, n, fp ) ) < 0 ) {
       free( dat );
       free( dims );
       free( enc );
@@ -670,6 +730,7 @@ bxRead( FILE *fp, int *headc, char ***headv, int *dimc, int **dimv,
 	free( prev->str );
 	free( prev );
       }
+      lf_error( "read error" );
       return -1;
     }
   }
@@ -686,6 +747,7 @@ bxRead( FILE *fp, int *headc, char ***headv, int *dimc, int **dimv,
 	free( prev->str );
 	free( prev );
       }
+      lf_error( "memory error" );
       return -3;
     }
     for ( prev = here = head.next, i = 0; here; prev = here, i++ ) {
@@ -767,8 +829,8 @@ bxSkipHeader( FILE *fp )
 
 `#include "lofasmIO.h"`
 
-`int bxWriteData( const char *`_encoding_`, const void *`_buf_`,
-                 size_t` _n_`, size_t` _nrow_`, FILE *`_fp_ `);`
+`int64_t bxWriteData( const char *`_encoding_`, const void *`_buf_`,
+                     size_t` _n_`, size_t` _nrow_`, FILE *`_fp_ `);`
 
 ## DESCRIPTION
 
@@ -797,15 +859,24 @@ abx(5),
 bbx(5)
 
 </MARKDOWN> */
-int
+int64_t
 bxWriteData( const char *encoding, const void *buf, size_t n,
 	     size_t nrow, FILE *fp )
 {
-  int i, nl;  /* number of bytes written and bytes per line */
-  int kr, kl; /* indecies over bytes written per row and line */
+  int64_t i, nl;  /* number of bytes written and bytes per line */
+  int64_t kr, kl; /* indecies over bytes written per row and line */
   const unsigned char *ubuf = buf;
-  if ( !encoding || !buf || !fp )
+  if ( !encoding || !buf || !fp || n > INT64_MAX/8 ) {
+    if ( !encoding )
+      lf_error( "null encoding pointer" );
+    if ( !buf )
+      lf_error( "null storage buffer pointer" );
+    if ( !fp )
+      lf_error( "null file pointer" );
+    if ( n > INT64_MAX/8 )
+      lf_error( "requested number of bits 8*%lu exceeds INT64_MAX", n );
     return -1;
+  }
   if ( nrow == 0 )
     nrow = n;
   if ( !strcmp( encoding, "raw256" ) )
@@ -873,7 +944,7 @@ bxWriteData( const char *encoding, const void *buf, size_t n,
 
 `#include "lofasmIO.h"`
 
-`int bxWrite( FILE *`_fp_`, const char **`_headv_`, const int *`_dimv_`,
+`int bxWrite( FILE *`_fp_`, const char **`_headv_`, const int64_t *`_dimv_`,
              const char *`_encoding_`, const void *`_data_`, int ` _checks_ ` );`
 
 ## DESCRIPTION
@@ -963,32 +1034,56 @@ bbx(5)
 
 </MARKDOWN> */
 int
-bxWrite( FILE *fp, char **headv, const int *dimv,
+bxWrite( FILE *fp, char **headv, const int64_t *dimv,
 	 const char *encoding, const void *data, int checks )
 {
-  const int *dim;    /* pointer to dimv */
-  char **head;       /* pointer to headv */
-  const char *c;     /* pointer to character in headv */
-  int nb = 1, n, nr; /* number of bits, bytes, and bytes per row */
+  const int64_t *dim;    /* pointer to dimv */
+  char **head;           /* pointer to headv */
+  const char *c;         /* pointer to character in headv */
+  int64_t nb = 1, n, nr; /* number of bits, bytes, and bytes per row */
 
   /* Check arguments. */
-  if ( !fp || !headv || !dimv || !dimv[0] || !encoding )
+  if ( !fp || !headv || !dimv || dimv[0] <= 0 || !encoding ) {
+    if ( !fp )
+      lf_error( "null file pointer" );
+    if ( !headv )
+      lf_error( "null headv array" );
+    if ( !dimv )
+      lf_error( "null dimv array" );
+    if ( dimv[0] <= 0 )
+      lf_error( "non-positive dimv[0]" );
+    if ( !encoding )
+      lf_error( "null encoding string" );
     return -1;
+  }
   for ( dim = dimv; *dim; dim++ ) {
-    nb *= *dim;
-    if ( *dim < 0 )
+    if ( *dim < 0 ) {
+      lf_error( "negative dimension" );
       return -1;
+    } else if ( nb > INT64_MAX/( *dim ) ) {
+      lf_error( "number of bits exceeds INT64_MAX" );
+      return -1;
+    }
+    nb *= *dim;
   }
   n = ( nb%8 ? nb/8 + 1 : nb/8 );
   nr = ( ( nb/dimv[0] )%8 ? n : nb/dimv[0]/8 );
   dim--;
-  if ( !strcmp( encoding, "float" ) && ( *dim )%( 8*sizeof(float) ) )
+  if ( !strcmp( encoding, "float" ) && ( *dim )%( 8*sizeof(float) ) ) {
+    lf_error( "float encoding: last dimension %lld not a multiple of %lu bits",
+	      (long long)( *dim ), 8*sizeof(float) );
     return -1;
-  if ( !strcmp( encoding, "double" ) && ( *dim )%( 8*sizeof(double) ) )
+  }
+  if ( !strcmp( encoding, "double" ) && ( *dim )%( 8*sizeof(double) ) ) {
+    lf_error( "double encoding: last dimension %lld not a multiple of %lu bits",
+	      (long long)( *dim ), 8*sizeof(double) );
     return -1;
+  }
   if ( strcmp( encoding, "raw16" ) && strcmp( encoding, "float" ) &&
-       strcmp( encoding, "double" ) && strcmp( encoding, "raw256" ) )
+       strcmp( encoding, "double" ) && strcmp( encoding, "raw256" ) ) {
+    lf_error( "unrecognized encoding '%s'", encoding );
     return -1;
+  }
 
   /* Perform additional requested checks. */
   head = headv;
@@ -996,48 +1091,72 @@ bxWrite( FILE *fp, char **headv, const int *dimv,
     if ( ( !strcmp( encoding, "raw16" ) || !strcmp( encoding, "float" ) ||
 	   !strcmp( encoding, "double" ) ) &&
 	 ( !(*head) || strncmp( *head, "ABX", 3 ) ) ) {
-      if ( fputs( "%ABX\n", fp ) == EOF )
+      if ( fputs( "%ABX\n", fp ) == EOF ) {
+	lf_error( "write error" );
 	return -2;
+      }
     } else if ( !strcmp( encoding, "raw256" ) &&
 		( !(*head) || strncmp( *head, "BBX", 3 ) ) ) {
-      if ( fputs( "%BBX\n", fp ) == EOF )
+      if ( fputs( "%BBX\n", fp ) == EOF ) {
+	lf_error( "write error" );
 	return -2;
+      }
     }
   } else if ( checks&BX_CHECK_ID && *head &&
 	      !( strncmp( *head, "ABX", 3 ) && strncmp( *head, "BBX", 3 ) ) ) {
     if ( !strcmp( encoding, "raw16" ) || !strcmp( encoding, "float" ) ||
 	 !strcmp( encoding, "double" ) ) {
-      if ( fputs( "%ABX\n", fp ) == EOF )
+      if ( fputs( "%ABX\n", fp ) == EOF ) {
+	lf_error( "write error" );
 	return -2;
+      }
     } else if ( !strcmp( encoding, "raw256" ) ) {
-      if ( fputs( "%BBX\n", fp ) == EOF )
+      if ( fputs( "%BBX\n", fp ) == EOF ) {
+	lf_error( "write error" );
 	return -2;
+      }
     }
     head++;
   }
 
   /* Write comments. */
   for ( ; *head; head++ ) {
-    if ( putc( '%', fp ) == EOF )
+    if ( putc( '%', fp ) == EOF ) {
+      lf_error( "write error" );
       return -2;
-    for ( c = *head; *c; c++ ) {
-      if ( putc( *c, fp ) == EOF )
-	return -2;
-      if ( *c == '\n' && putc( '%', fp ) == EOF )
-	return -2;
     }
-    if ( putc( '\n', fp ) == EOF )
+    for ( c = *head; *c; c++ ) {
+      if ( putc( *c, fp ) == EOF ) {
+	lf_error( "write error" );
+	return -2;
+      }
+      if ( *c == '\n' && putc( '%', fp ) == EOF ) {
+	lf_error( "write error" );
+	return -2;
+      }
+    }
+    if ( putc( '\n', fp ) == EOF ) {
+      lf_error( "write error" );
       return -2;
+    }
   }
 
   /* Write metadata line. */
   for ( dim = dimv; *dim; dim++ )
-    fprintf( fp, "%d ", *dim );
-  fprintf( fp, "%s\n", encoding );
+    if ( fprintf( fp, "%lld ", (long long)( *dim ) ) < 0 ) {
+      lf_error( "write error" );
+      return -2;
+    }
+  if ( fprintf( fp, "%s\n", encoding ) < 0 ) {
+    lf_error( "write error" );
+    return -2;
+  }
 
   /* Write data. */
-  if ( data && bxWriteData( encoding, data, n, nr, fp ) < n )
+  if ( data && bxWriteData( encoding, data, n, nr, fp ) < n ) {
+    lf_error( "write error" );
     return -2;
+  }
 
   /* Finished. */
   return 0;
@@ -1169,13 +1288,19 @@ lfbxRead( FILE *fp, lfb_hdr *header, void **data )
 {
   char line[LEN];        /* current line */
   char *str, *tail;      /* pointers to header strings */
-  int i, n;              /* index and length */
+  int64_t i, n;          /* index and length */
+  unsigned long long d;  /* dimension */
   int read = 0;          /* whether a line was already read */
   int err = 0, warn = 0; /* error and warning flags */
 
   /* Check arguments. */
   if ( !fp || !header || ( data && *data ) ) {
-    lf_error( "bad argument(s)" );
+    if ( !fp )
+      lf_error( "null file pointer" );
+    if ( !header )
+      lf_error( "null header" );
+    if ( data && *data )
+      lf_error( "data handle points to non-NULL pointer" );
     return 3;
   }
 
@@ -1306,22 +1431,29 @@ lfbxRead( FILE *fp, lfb_hdr *header, void **data )
     warn = 1;
   }
 
-  /* Line should now store 4 dimensions, and encoding.  Legacy files
-     may have fewer dimensions: there must be at least one (the bit
-     depth), and set missing dimensions explicitly to 1. */
+  /* Line should now store LFB_DMAX dimensions, and encoding.  Legacy
+     files may have fewer dimensions, but must have at least one (the
+     bit depth).  In this case, the last dimension read is assumed to
+     be the bit depth: it is moved to the end of the list, and any
+     unfilled dimensions are set explicitly to 1. */
   memset( header->dims, 0, LFB_DMAX*sizeof(int) );
-  for ( i = 0, str = NULL, tail = line; i < LFB_DMAX && str != tail; i++ )
-    if ( ( header->dims[i] = strtol( ( str = tail ), &tail, 10 ) ) < 1.0 ) {
-      lf_error( "invalid dimension" );
+  for ( i = 0, str = line; i < LFB_DMAX; i++, str = tail ) {
+    d = strtoull( str, &tail, 10 );
+    if ( tail == str )
+      break;
+    else if ( d < 1 || d > INT64_MAX ) {
+      lf_error( "dimension[%d] = %llu out of range", (int)( i ), d );
       return 2;
-    }
+    } else
+      header->dims[i] = d;
+  }
   if ( i < 1 ) {
     lf_error( "no dimensions" );
     return 2;
   } else if ( i < LFB_DMAX ) {
-    lf_warning( "%d missing dimensions; setting to 1", LFB_DMAX - i );
+    lf_warning( "%d missing dimensions; setting to 1", LFB_DMAX - (int)( i ) );
     warn = 1;
-    header->dims[3] = header->dims[i-1];
+    header->dims[LFB_DMAX-1] = header->dims[i-1];
     for ( n = i - 1; n < LFB_DMAX - 1; n++ )
       header->dims[n] = 1;
   }
@@ -1330,7 +1462,7 @@ lfbxRead( FILE *fp, lfb_hdr *header, void **data )
   if ( ( str = header->data_type ) ) {
     while ( !isdigit( (int)( *str ) ) )
       str++;
-    if ( strtol( str, NULL, 10 ) != header->dims[3] )
+    if ( strtoll( str, NULL, 10 ) != header->dims[LFB_DMAX-1] )
       lf_warning( "bit depth does not match data_type" );
   }
 
@@ -1342,10 +1474,15 @@ lfbxRead( FILE *fp, lfb_hdr *header, void **data )
     return 2;
   }
 
+  /* Check total size of array. */
+  for ( i = 0, n = 1; i < LFB_DMAX; i++, n *= header->dims[i] )
+    if ( n > INT64_MAX/header->dims[i] ) {
+      lf_error( "number of bits exceeds INT64_MAX" );
+      return 2;
+    }
+
   /* Allocate and fill data if requested. */
   if ( data ) {
-    for ( n = 1, i = 0; i < LFB_DMAX; i++ )
-      n *= header->dims[i];
     n = ( n%8 ? n/8 + 1 : n/8 );
     if ( posix_memalign( data, 8, n ) ) {
       lf_error( "could not allocate data pointer" );
@@ -1353,7 +1490,8 @@ lfbxRead( FILE *fp, lfb_hdr *header, void **data )
     }
     memset( *data, 0, n );
     if ( ( i = fread( *data, 1, n, fp ) ) < n )
-      lf_warning( "read %d bytes, expected %d", i, n );
+      lf_warning( "read %lld bytes, expected %lld", (long long)( i ),
+		  (long long)( n ) );
   }
 
   /* Finished. */
@@ -1417,21 +1555,27 @@ lofasm-filterbank(5)
 int
 lfbxWrite( FILE *fp, lfb_hdr *header, void *data )
 {
-  int i, n = 0;      /* index and data length. */
+  int64_t i, n;      /* index and data length. */
   char *str;         /* pointer to header string */
   int err, warn = 0; /* error and warning flags */
 
   /* Check arguments. */
   if ( !fp || !header ) {
-    lf_error( "missing argument(s)" );
+    if ( !fp )
+      lf_error( "null file pointer" );
+    if ( !header )
+      lf_error( "null header" );
     return 3;
   }
-  for ( n = 1, i = 0; i < LFB_DMAX; i++ )
-    n *= ( header->dims[i] > 0 ? header->dims[i] : 0 );
-  if ( n < 1 ) {
-    lf_error( "bad dimensions" );
-    return 3;
-  }
+  for ( n = 1, i = 0; i < LFB_DMAX; i++, n *= header->dims[i] )
+    if ( header->dims[i] <= 0 ) {
+      lf_error( "non-positive dimension dims[%d]=%lld", (int)( i ),
+		(long long)( header->dims[i] ) );
+      return 3;
+    } else if ( n > INT64_MAX/header->dims[i] ) {
+      lf_error( "number of bits exceeds INT64_MAX" );
+      return 3;
+    }
 
   /* Check required fields. */
   if ( !header->hdr_type || !header->station || !header->channel ||
@@ -1450,7 +1594,7 @@ lfbxWrite( FILE *fp, lfb_hdr *header, void *data )
   if ( ( str = header->data_type ) ) {
     while ( !isdigit( (int)( *str ) ) )
       str++;
-    if ( strtol( str, NULL, 10 ) != header->dims[LFB_DMAX-1] )
+    if ( strtoll( str, NULL, 10 ) != header->dims[LFB_DMAX-1] )
       lf_warning( "bit depth does not match data_type" );
   }
 
@@ -1523,7 +1667,7 @@ lfbxWrite( FILE *fp, lfb_hdr *header, void *data )
   /* Write dimensions and encoding. */
   for ( i = 0; !err && i < LFB_DMAX; i++ )
     err = ( header->dims[i] < 1 ||
-	    fprintf( fp, "%d ", header->dims[i] ) < 1 );
+	    fprintf( fp, "%lld ", (long long)( header->dims[i] ) ) < 1 );
   err = err || ( fprintf( fp, "raw256\n" ) < 1 );
 
   /* Write data, if requested. */

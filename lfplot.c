@@ -182,8 +182,8 @@ main( int argc, char **argv )
   double scale = 1.0, off = 0.0; /* -s option */
   double base = 0.0;             /* -l option */
   lfb_hdr head = {};             /* lofasm header */
-  int i, j, jnext, k, n;         /* indecies and number of data read */
-  int stride;                    /* spacing between data */
+  int64_t i, j, jnext, k, n;     /* indecies and number of data read */
+  int64_t stride;                /* spacing between data */
   int multi;                     /* plot multiple dim3 components */
   int first, eod = 0;            /* flags for NaN or end-of-data */
   double d, dmin, dmax;          /* datum and extrema */
@@ -382,8 +382,8 @@ main( int argc, char **argv )
   stride = head.dims[2];
   if ( dim == 1 ) {
     if ( ( k = fread( dat, sizeof(double), n, fpin ) ) < n ) {
-      lf_warning( "read %d numbers from %s, expected %d",
-		  k, infile, n );
+      lf_warning( "read %lld numbers from %s, expected %lld",
+		  (long long)( k ), infile, (long long)( n ) );
       memset( dat + k, 0, ( n - k )*sizeof(double) );
     }
     stride *= head.dims[1];
@@ -402,8 +402,9 @@ main( int argc, char **argv )
 	jnext = ( i*head.dims[0]/num );
       for ( ; !eod && j < jnext; j++ )
 	if ( ( k = fread( dat, sizeof(double), n, fpin ) ) < n ) {
-	  lf_warning( "read %d numbers from %s, expected %d",
-		      j*n + k, infile, head.dims[0]*n );
+	  lf_warning( "read %lld numbers from %s, expected %lld",
+		      (long long)( j*n + k ), infile,
+		      (long long)( head.dims[0]*n ) );
 	  memset( dat + k, 0, ( n - k )*sizeof(double) );
 	  eod = 1;
 	}

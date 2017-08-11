@@ -134,17 +134,18 @@ static const struct option long_opts[] = {
 int
 main( int argc, char **argv )
 {
-  char opt;               /* short option character */
-  int lopt;               /* long option index */
-  char *infile, *outfile; /* input/output filenames */
-  FILE *fpin, *fpout;     /* input/output file objects */
-  lfb_hdr head = {};      /* input/output filterbank header */
-  unsigned char *row;     /* single timestep of data */
-  double tmin, tmax;      /* time range to extract (s) */
-  int nmin, nmax;         /* timestep range to extract */
-  char mode = '\0';       /* whether -t or -n was specified */
-  int j = 0;              /* index over time */
-  int nrow;               /* bytes in a single row */
+  char opt;                     /* short option character */
+  int lopt;                     /* long option index */
+  char *tail;                   /* pointer within option argument */
+  char *infile, *outfile;       /* input/output filenames */
+  FILE *fpin, *fpout;           /* input/output file objects */
+  lfb_hdr head = {};            /* input/output filterbank header */
+  unsigned char *row;           /* single timestep of data */
+  double tmin, tmax;            /* time range to extract (s) */
+  long long nmin = 0, nmax = 0; /* timestep range to extract */
+  char mode = '\0';             /* whether -t or -n was specified */
+  int64_t j = 0;                /* index over time */
+  int64_t nrow;                 /* bytes in a single row */
 
   /* Parse options. */
   opterr = 0;
@@ -182,13 +183,16 @@ main( int argc, char **argv )
       }
       break;
     case 'n':
-      if ( sscanf( optarg, "%d%d", &nmin, &nmax ) < 2 ) {
+      tail = optarg;
+      nmin = strtoll( tail, &tail, 10 );
+      nmax = strtoll( tail, &tail, 10 );
+      if ( tail == optarg ) {
 	lf_error( "could not parse timestep range" );
 	return 1;
       }
       mode = 'n';
       if ( nmin > nmax ) {
-	int temp = nmin;
+	int64_t temp = nmin;
 	nmin = nmax;
 	nmax = temp;
       }
@@ -252,10 +256,15 @@ main( int argc, char **argv )
 
   /* Get timestep range. */
   if ( mode == 't' ) {
-    nmin = (int)ceil( ( tmin - head.dim1_start - head.time_offset_J2000 )
-		      *head.dims[0]/head.dim1_span );
-    nmax = (int)ceil( ( tmax - head.dim1_start - head.time_offset_J2000 )
-		      *head.dims[0]/head.dim1_span );
+    double n;
+    n = ceil( ( tmin - head.dim1_start - head.time_offset_J2000 )
+	      *head.dims[0]/head.dim1_span );
+    nmin = ( n < LLONG_MIN ? LLONG_MIN :
+	     ( n > LLONG_MAX ? LLONG_MAX : (int64_t)( n ) ) );
+    n = ceil( ( tmax - head.dim1_start - head.time_offset_J2000 )
+	      *head.dims[0]/head.dim1_span );
+    nmax = ( n < LLONG_MIN ? LLONG_MIN :
+	     ( n > LLONG_MAX ? LLONG_MAX : (int64_t)( n ) ) );
   } else if ( mode != 'n' ) {
     nmin = 0;
     nmax = head.dims[1];
@@ -325,6 +334,7 @@ main( int argc, char **argv )
   free( row );
   lfbxFree( &head );
   if ( j < head.dims[0] )
-    lf_warning( "read %d rows from %s, expected %d", j, infile, head.dims[0] );
+    lf_warning( "read %lld rows from %s, expected %lld", (long long)( j ),
+		infile, (long long)( head.dims[0] ) );
   return 0;
 }

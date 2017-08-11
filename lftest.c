@@ -109,11 +109,11 @@ main( int argc, char *argv[] )
 {
   char opt;           /* short option character */
   int lopt;           /* long option index */
-  FILE *fpin, *fpout; /* input and output file pointers */
+  FILE *fpin, *fpout = NULL; /* input and output file pointers */
   char *infile = NULL, *outfile = NULL; /* input and outpit filenames */
   const char *prefix = "magnitude of "; /* modification to data label */
   char *label;        /* modified data label */
-  int i, j, k;        /* indecies */
+  int64_t i, j, k;    /* indecies */
   lfb_hdr head = {};  /* header structure */
   double *dat, *d;    /* row of data and pointer within it */
 

@@ -143,11 +143,11 @@ main( int argc, char **argv )
 {
   char opt;                /* option character */
   int lopt;                /* long option index */
-  int l1 = 1, l2 = 1;      /* filter length along each dimension */
+  unsigned long long l1 = 1, l2 = 1; /* filter length along each dimension */
   char *infile, *outfile;  /* input/output file names */
   FILE *fpin, *fpout;      /* input/output file pointers */
-  int i, j, n, k, z;       /* indecies */
-  int stride;              /* step between successive samples */
+  int64_t i, j, n, k, z;   /* indecies */
+  int64_t stride;          /* step between successive samples */
   lfb_hdr head = {};       /* file header */
   double *dat, *row, *out; /* data block, row, and fitered output */
   double *buf;             /* circular buffer of filtered data */
@@ -176,13 +176,13 @@ main( int argc, char **argv )
       lofasm_verbosity = atoi( optarg );
       break;
     case 'y':
-      if ( sscanf( optarg, "%d", &l1 ) < 1 || l1 < 1 ) {
+      if ( ( l1 = strtoull( optarg, NULL, 10 ) ) < 1 || l1 > INT64_MAX ) {
 	lf_error( "bad -y, --cols argument %s", optarg );
 	return 1;
       }
       break;
     case 'x':
-      if ( sscanf( optarg, "%d", &l2 ) < 1 || l2 < 1 ) {
+      if ( ( l2 = strtoull( optarg, NULL, 10 ) ) < 1 || l2 > INT64_MAX ) {
 	lf_error( "bad -x, --rows argument %s", optarg );
 	return 1;
       }
@@ -315,7 +315,8 @@ main( int argc, char **argv )
   if ( l1 > 1 ) {
     n = head.dims[0]*head.dims[1]*head.dims[2];
     if ( ( i = fread( dat, sizeof(double), n, fpin ) ) < n ) {
-      lf_warning( "read %d data from %s, expected %d", i, infile, n );
+      lf_warning( "read %lld data from %s, expected %lld",
+		  (long long)( i ), infile, (long long)( n ) );
       memset( dat + i, 0, ( n - i )*sizeof(double) );
     }
     stride = head.dims[1]*head.dims[2];
@@ -351,8 +352,9 @@ main( int argc, char **argv )
     else {
       if ( !feof( fpin ) ) {
 	if ( ( j = fread( dat, sizeof(double), n, fpin ) ) < n ) {
-	  lf_warning( "read %d data from %s, expected %d", i*n + j,
-		      infile, head.dims[0]*n );
+	  lf_warning( "read %lld data from %s, expected %lld",
+		      (long long)( i*n + j ), infile,
+		      (long long)( head.dims[0]*n ) );
 	  memset( dat + j, 0, ( n - j )*sizeof(double) );
 	}
 	row = dat;

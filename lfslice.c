@@ -112,6 +112,8 @@ lofasm-filterbank(5)\n\
 
 #include <stdio.h>
 #include <unistd.h>
+#include <stdint.h>
+#include <limits.h>
 #include <getopt.h>
 #include <math.h>
 #include "markdown_parser.h"
@@ -134,17 +136,18 @@ static const struct option long_opts[] = {
 int
 main( int argc, char **argv )
 {
-  char opt;               /* short option character */
-  int lopt;               /* long option index */
-  char *infile, *outfile; /* input/output filenames */
-  FILE *fpin, *fpout;     /* input/output file objects */
-  lfb_hdr head = {};      /* input/output filterbank header */
-  unsigned char *row;     /* single timestep of data */
-  double fmin, fmax;      /* frequency range to extract (Hz) */
-  int nmin, nmax;         /* bin range to extract */
-  char mode = '\0';       /* whether -f or -n was specified */
-  int j = 0;              /* index over time */
-  int nbin, nrow, nslice; /* bytes in a single bin, row, or slice */
+  char opt;                     /* short option character */
+  int lopt;                     /* long option index */
+  char *tail;                   /* substring within option argument */
+  char *infile, *outfile;       /* input/output filenames */
+  FILE *fpin, *fpout;           /* input/output file objects */
+  lfb_hdr head = {};            /* input/output filterbank header */
+  unsigned char *row;           /* single timestep of data */
+  double fmin, fmax;            /* frequency range to extract (Hz) */
+  long long nmin = 0, nmax = 0; /* bin range to extract */
+  char mode = '\0';             /* whether -f or -n was specified */
+  int64_t j = 0;                /* index over time */
+  int64_t nbin, nrow, nslice;   /* bytes in a single bin, row, or slice */
 
   /* Parse options. */
   opterr = 0;
@@ -182,13 +185,16 @@ main( int argc, char **argv )
       }
       break;
     case 'n':
-      if ( sscanf( optarg, "%d%d", &nmin, &nmax ) < 2 ) {
-	lf_error( "could not parse bin range" );
+      tail = optarg;
+      nmin = strtoll( tail, &tail, 10 );
+      nmax = strtoll( tail, &tail, 10 );
+      if ( tail == optarg || nmin > INT64_MAX || nmax > INT64_MAX ) {
+	lf_error( "bad bin range %s", optarg );
 	return 1;
       }
       mode = 'n';
       if ( nmin > nmax ) {
-	int temp = nmin;
+	int64_t temp = nmin;
 	nmin = nmax;
 	nmax = temp;
       }
@@ -252,10 +258,15 @@ main( int argc, char **argv )
 
   /* Get bin range. */
   if ( mode == 'f' ) {
-    nmin = (int)ceil( ( fmin - head.dim2_start - head.frequency_offset_DC )
-		      *head.dims[1]/head.dim2_span );
-    nmax = (int)ceil( ( fmax - head.dim2_start - head.frequency_offset_DC )
-		      *head.dims[1]/head.dim2_span );
+    double n;
+    n = ceil( ( fmin - head.dim2_start - head.frequency_offset_DC )
+	      *head.dims[1]/head.dim2_span );
+    nmin = ( n < LLONG_MIN ? LLONG_MIN :
+	     ( n > LLONG_MAX ? LLONG_MAX : (int64_t)( n ) ) );
+    n = ceil( ( fmax - head.dim2_start - head.frequency_offset_DC )
+	      *head.dims[1]/head.dim2_span );
+    nmax = ( n < LLONG_MIN ? LLONG_MIN :
+	     ( n > LLONG_MAX ? LLONG_MAX : (int64_t)( n ) ) );
   } else if ( mode != 'n' ) {
     nmin = 0;
     nmax = head.dims[1];
@@ -324,6 +335,7 @@ main( int argc, char **argv )
   free( row );
   lfbxFree( &head );
   if ( j < head.dims[0] )
-    lf_warning( "read %d rows from %s, expected %d", j, infile, head.dims[0] );
+    lf_warning( "read %lld rows from %s, expected %lld", (long long)( j ),
+		infile, (long long)( head.dims[0] ) );
   return 0;
 }
