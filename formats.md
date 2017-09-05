@@ -314,11 +314,11 @@ array and the representation of the bit sequence:
 
 where _dim1_ through _dimN_ are positive decimal integers in ordinary
 ASCII text specifying the lengths of each array dimension (their
-product not not to exceed the maximum value of a 64-bit signed
-integer, or 9223372036854775807), and _encoding_ is an ASCII string
-specifying the method of representing the bit data (see below),
-followed immediately by a newline `\n` character.  The encoded data
-begins on the byte immediately following the newline.
+product not to exceed the maximum value of a 64-bit signed integer, or
+9223372036854775807), and _encoding_ is an ASCII string specifying the
+method of representing the bit data (see below), followed immediately
+by a newline `\n` character.  The encoded data begins on the byte
+immediately following the newline.
 
 The metadata line may be preceded by zero or more lines of comments,
 where each comment line begins with an ASCII `%` character.  Comments

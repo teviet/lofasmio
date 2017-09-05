@@ -113,7 +113,7 @@ stored in a dedicated header structure `lfb_hdr`, defined as below:
         int64_t dims[LFB_DMAX];
     } lfb_hdr;
 
-where `LFB_MAX`=4 is the number of dimensions in a LoFASM filterbank.
+where `LFB_DMAX`=4 is the number of dimensions in a LoFASM filterbank.
 </MARKDOWN> */
 #define LFB_DMAX 4
 typedef struct {

@@ -114,6 +114,7 @@ lofasm-filterbank(5)\n\
 #include <unistd.h>
 #include <getopt.h>
 #include <math.h>
+#include <limits.h>
 #include "markdown_parser.h"
 #include "lofasmIO.h"
 
