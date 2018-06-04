@@ -1567,7 +1567,7 @@ lfbxWrite( FILE *fp, lfb_hdr *header, void *data )
       lf_error( "null header" );
     return 3;
   }
-  for ( n = 1, i = 0; i < LFB_DMAX; i++, n *= header->dims[i] )
+  for ( n = 1, i = 0; i < LFB_DMAX; n *= header->dims[i], i++ )
     if ( header->dims[i] <= 0 ) {
       lf_error( "non-positive dimension dims[%d]=%lld", (int)( i ),
 		(long long)( header->dims[i] ) );

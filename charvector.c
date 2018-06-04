@@ -152,9 +152,13 @@ charvector_append_c( charvector *cv, char c )
 char *
 charvector_append_vprintf( charvector *cv, const char *format, va_list list )
 {
-  int n = vsnprintf( NULL, 0, format, list );
-  char *str = (char *)malloc( ( n + 1 )*sizeof(char) );
-  if ( !str )
+  char *str;    /* string to be appended */
+  int n;        /* length of string to be appended */
+  va_list temp; /* copy of argument list to calculate length of string */
+  va_copy( temp, list );
+  n = vsnprintf( NULL, 0, format, temp );
+  va_end( temp );
+  if ( !( str = (char *)calloc( n + 1, sizeof(char) ) ) )
     return NULL;
   vsnprintf( str, n + 1, format, list );
   if ( !charvector_append( cv, str ) ) {
