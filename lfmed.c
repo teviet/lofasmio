@@ -28,6 +28,7 @@ Compute running medians of a LoFASM file.\n\
   -v, --verbosity=LEVEL  set status message reporting level\n\
   -y, --cols=R           average with radius R along columns (dimension 1)\n\
   -x, --rows=R           average with radius R along rows (dimension 2)\n\
+  -p, --percent=P        compute a running Pth percentile (default: 50)\n\
 \n";
 
 static const char *description = "\
@@ -124,6 +125,12 @@ current code.\n\
     conjunction with `-y, --cols`, above, column filtering is\n\
     performed first.\n\
 \n\
+`-p, --percent=`_P_:\n\
+    Instead of a running median, computes a running *P*th percentile,\n\
+    where *P* is any number (integer or floating point) from 0 to 100:\n\
+    *P*=0 gives a running minimum, *P*=100 a running maximum, and\n\
+    *P*=50 a running median (the default).\n\
+\n\
 ## EXIT STATUS\n\
 \n\
 The proram exits with status 0 normally, 1 if there is an error\n\
@@ -143,7 +150,7 @@ lofasm-filterbank(5)\n\
 #include "markdown_parser.h"
 #include "lofasmIO.h"
 
-static const char short_opts[] = "hHVv:y:x:";
+static const char short_opts[] = "hHVv:y:x:p:";
 static const struct option long_opts[] = {
   { "help", 0, 0, 'h' },
   { "man", 0, 0, 'H' },
@@ -153,6 +160,7 @@ static const struct option long_opts[] = {
   { "verbosity", 1, 0, 'v' },
   { "cols", 1, 0, 'y' },
   { "rows", 1, 0, 'x' },
+  { "percent", 1, 0, 'p' },
   { 0, 0, 0, 0} };
 
 /* Array and comparison function for indexed sorting of
@@ -181,6 +189,7 @@ main( int argc, char **argv )
   int64_t i, imin, imax;   /* index and range in columns */
   int64_t j, jmin, jmax;   /* index and range in rows */
   int64_t n, k;            /* more indecies */
+  double p = 0.5;          /* percentile expressed as a fraction */
   lfb_hdr head = {};       /* file header */
   double *dat, *row, *out; /* data block, row, and fitered output */
   int64_t *idx;            /* sorting index */
@@ -218,6 +227,13 @@ main( int argc, char **argv )
       r2 = strtoull( optarg, &tail, 10 );
       if ( tail == optarg || r2 > INT64_MAX ) {
 	lf_error( "bad -x, --rows argument %s", optarg );
+	return 1;
+      }
+      break;
+    case 'p':
+      p = 0.01*strtod( optarg, &tail );
+      if ( tail == optarg || !( p >= 0.0 && p <= 1.0 ) ) {
+	lf_error( "bad -p, --percent argument %s", optarg );
 	return 1;
       }
       break;
@@ -401,7 +417,7 @@ main( int argc, char **argv )
 	for ( k = 0; k < jmax - jmin; k++ )
 	  idx[k] = k;
 	qsort( idx, jmax - jmin, sizeof(int64_t), ascend );
-	out[j] = ddata[ ( idx[ ( jmax - jmin )/2 ] ) ];
+	out[j] = ddata[ ( idx[ (int)( p*( jmax - jmin - 1 ) + 0.5 ) ] ) ];
       }
     }
     if ( r2 > 0 )
