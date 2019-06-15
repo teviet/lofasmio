@@ -31,6 +31,7 @@ Combine consecutive LoFASM files in time.\n\
   -l, --medlin=STEPS     as -m but interpolate between either side\n\
   -a, --align-warn=EPS   set threshold for alignment warnings\n\
   -A, --align-err=EPS    set threshold for alignment errors\n\
+  -i, --ignore-align     ignore misalignment, gaps, or overlap\n\
 \n";
 
 static const char *description = "\
@@ -133,6 +134,14 @@ user-specified thresholds.\n\
     can specify both `--align-warn` and `--align-err` with different\n\
     thresholds.\n\
 \n\
+`-i, --ignore-timing`:\n\
+    Concatenate data blocks regardless of timing data in all but the\n\
+    first header, ignoring data gaps, overlap, misordered files,\n\
+    misaligned samples, or incompatible sample rates.  The data is\n\
+    concatenated in the order that files are specified on the command\n\
+    line, Technically the timing data is not \"ignored\", but\n\
+    generates warnings rather than stopping the program.\n\
+\n\
 ## EXIT STATUS\n\
 \n\
 The proram exits with status 0 normally, 1 if there is an error\n\
@@ -155,7 +164,7 @@ lofasm-filterbank(5)\n\
 #include "markdown_parser.h"
 #include "lofasmIO.h"
 
-static const char short_opts[] = "hHVv:p:m:l:a:A:";
+static const char short_opts[] = "hHVv:p:m:l:a:A:i";
 static const struct option long_opts[] = {
   { "help", 0, 0, 'h' },
   { "man", 0, 0, 'H' },
@@ -168,6 +177,7 @@ static const struct option long_opts[] = {
   { "medlin", 1, 0, 'l' },
   { "align-warn", 1, 0, 'a' },
   { "align-err", 1, 0, 'A' },
+  { "ignore-timing", 0, 0, 'i' },
   { 0, 0, 0, 0} };
 
 #define LEN 1024 /* character buffer size */
@@ -224,6 +234,7 @@ main( int argc, char **argv )
   int lopt;                   /* long option index */
   float awarn = 2, aerr = 2;  /* alignment warning/error thresholds */
   int64_t gaps = 0;           /* number of gaps */
+  int ignore = 0;             /* whether to ignore timing mismatches */
   int dopad = 1;              /* whether to pad gaps */
   double padd = 0.0;          /* pad value for gaps */
   float padf = 0.0;           /* pad value if data are real32 */
@@ -303,6 +314,9 @@ main( int argc, char **argv )
 	lf_error( "alignment error threshold should be between 0 and 1\n" );
 	CLEANEXIT( 1 );
       }
+      break;
+    case 'i':
+      ignore = 1;
       break;
     case '?':
       if ( optopt )
@@ -453,7 +467,8 @@ main( int argc, char **argv )
   }
   for ( i = 0; i < nin; i++ )
     idx[i] = i;
-  qsort( idx, nin, sizeof(int), ascendingTimes );
+  if ( !ignore )
+    qsort( idx, nin, sizeof(int), ascendingTimes );
 
   /* Refer all times to common epoch, and get timestep. */
   for ( i = 1; i < nin; i++ ) {
@@ -471,20 +486,31 @@ main( int argc, char **argv )
     lfb_hdr *h = headers + idx[i];
     double kf = ( h->dim1_start - t0 )/dt;
     if ( round( kf ) > INT64_MAX ) {
-      lf_error( "start of file %d more than INT4_MAX steps from start of"
-		" file %d", idx[i-1], idx[i] );
-      CLEANEXIT( 3 );
+      if ( !ignore ) {
+	lf_error( "start of file %d more than INT4_MAX steps from start of"
+		  " file %d", idx[i-1], idx[i] );
+	CLEANEXIT( 3 );
+      }
     }
     k = (int64_t)round( kf );
     if ( k < klast ) {
-      lf_error( "overlap between files %d and %d from argument list\n\t"
-		"(ordered %d and %d after sorting)",
-		idx[i-1], idx[i], (int)( i ) - 1, (int)( i ) );
-      CLEANEXIT( 3 );
+      if ( ignore )
+	lf_warning( "overlap between files %d and %d from argument list\n\t"
+		    "(ordered %d and %d after sorting)",
+		    idx[i-1], idx[i], (int)( i ) - 1, (int)( i ) );
+      else {
+	lf_error( "overlap between files %d and %d from argument list\n\t"
+		  "(ordered %d and %d after sorting)",
+		  idx[i-1], idx[i], (int)( i ) - 1, (int)( i ) );
+	CLEANEXIT( 3 );
+      }
     }
     if ( k > klast ) {
       gaps += k - klast;
-      if ( !dopad ) {
+      if ( ignore )
+	lf_warning( "gap between files %d and %d from argument list",
+		    idx[i-1], idx[i] );
+      else if ( !dopad ) {
 	lf_error( "gap between files %d and %d from argument list\n\t"
 		  "(ordered %d and %d after sorting)",
 		  idx[i-1], idx[i], (int)( i ) - 1, (int)( i ) );
@@ -495,21 +521,28 @@ main( int argc, char **argv )
       epsmax = eps;
     klast = k + h->dims[0];
     if ( round( klast ) > INT64_MAX ) {
-      lf_error( "end of file %d more than INT4_MAX steps from start of"
-		" file %d", idx[i-1], idx[i] );
-      CLEANEXIT( 3 );
+      if ( !ignore ) {
+	lf_error( "end of file %d more than INT4_MAX steps from start of"
+		  " file %d", idx[i-1], idx[i] );
+	CLEANEXIT( 3 );
+      }
     }
     kf += h->dim1_span/dt;
     k = (int64_t)round( kf );
     if ( k != klast ) {
-      lf_error( "misalignment in file %d from argument list\n\t"
-		"(ordered %d after sorting)", idx[i], (int)( i ) );
-      CLEANEXIT( 3 );
+      if ( ignore )
+	lf_warning( "misalignment in file %d from argument list\n\t"
+		    "(ordered %d after sorting)", idx[i], (int)( i ) );
+      else {
+	lf_error( "misalignment in file %d from argument list\n\t"
+		  "(ordered %d after sorting)", idx[i], (int)( i ) );
+	CLEANEXIT( 3 );
+      }
     }
     if ( ( eps = fabs( k - kf ) ) > epsmax )
       epsmax = eps;
   }
-  if ( epsmax > aerr ) {
+  if ( epsmax > aerr && !ignore ) {
     lf_error( "max misalignment %e > %e", epsmax, aerr );
     CLEANEXIT( 3 );
   } else if ( epsmax > awarn )
@@ -521,6 +554,9 @@ main( int argc, char **argv )
 	     (long long)( klast ), (float)( 100.0*gaps )/klast );
 
   /* Write output header. */
+  if ( ignore )
+    for ( i = 0, klast = 0; i < nin; i++ )
+      klast += headers[idx[i]].dims[0];
   memcpy( &header, headers + idx[0], sizeof(lfb_hdr) );
   header.dims[0] = klast;
   header.dim1_span = klast*dt;
@@ -548,7 +584,7 @@ main( int argc, char **argv )
     lf_error( "memory error" );
     CLEANEXIT( 4 );
   }
-  if ( gaps ) {
+  if ( gaps && !ignore ) {
     if ( med )
       gap = (unsigned char *)malloc( 2*med*nrow*sizeof(unsigned char) );
     else
@@ -585,7 +621,53 @@ main( int argc, char **argv )
     }
   }
 
-  /* Write data. */
+  /* Write data (trivial concatenation). */
+  if ( ignore ) {
+    for ( i = 0; i < nin; i++ ) {
+      if ( !strcmp( argv[optind+i], "-" ) ) {
+	if ( !( fpin = lfdopen( 0, "rb" ) ) ) {
+	  lf_error( "could not read from stdin" );
+	  CLEANEXIT( 2 );
+	}
+	istd = 1;
+	infile = "stdin";
+      } else {
+	if ( !( fpin = lfopen( ( infile = argv[optind+i] ), "rb" ) ) ) {
+	  lf_error( "could not open input %s", infile );
+	  CLEANEXIT( 2 );
+	}
+	istd = 0;
+	bxSkipHeader( fpin );
+      }
+      for ( k = 0; k < headers[i].dims[0] && !feof( fpin ); k++ ) {
+	if ( ( n = fread( row, 1, nrow, fpin ) ) < nrow ) {
+	  lf_info( "read %lld bytes from %s, expected %lld",
+		   (long long)( n ), infile,
+		   (long long)( headers[i].dims[0]*nrow ) );
+	  memset( row + n, 0, nrow - n );
+	}
+	if ( fwrite( row, 1, nrow, fpout ) < nrow ) {
+	  lf_error( "error writing to %s", outfile );
+	  CLEANEXIT( 2 );
+	}
+      }
+      if ( k < headers[i].dims[0] ) {
+	memset( row, 0, nrow - n );
+	for ( ; k < headers[i].dims[0]; k++ )
+	  if ( fwrite( row, 1, nrow, fpout ) < nrow ) {
+	    lf_error( "error writing to %s", outfile );
+	    CLEANEXIT( 2 );
+	  }
+      }
+      if ( !istd ) {
+	fclose( fpin );
+	fpin = NULL;
+      }
+    }
+    CLEANEXIT( 0 );
+  }
+
+  /* Write data (general case). */
   for ( i = k = 0; i < nin; i++ ) {
     lfb_hdr *h = headers + idx[i];         /* this file's header */
     double kf = ( h->dim1_start - t0 )/dt; /* initial index as float */
