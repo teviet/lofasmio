@@ -46,7 +46,7 @@ OBJS = lofasmIO.o
 ALLOBJS = markdown_peg.o markdown_parser.o charvector.o $(OBJS)
 LIBS = liblofasmio.a($(OBJS))
 PROGS = lfslice lfchop lfcat lftest bxresample lftype lfplot2d lfstats \
-	lfmed lfmean lfplot
+	lfmed lfmean lfplot lfsquish
 ALLPROGS = md2man $(PROGS)
 DISTFILES = Makefile README.md INSTALL.md CONTRIBUTING.md COPYING.md LICENSE \
 	VERSION formats.md $(ALLHEADERS) $(ALLOBJS:.o=.c) $(ALLPROGS:=.c)
