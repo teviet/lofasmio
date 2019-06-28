@@ -61,7 +61,8 @@ the result will be written to standard output.  If no other non-option\n\
 argument _INFILE_ is given, a single input file is read from standard\n\
 input, resulting in a \"trivial\" concatenation.  Also, any one of\n\
 _INFILE_ may be a single `-` character, indicating a file to be read\n\
-from standard input.\n\
+from standard input.  Output is written one row at a time, so this\n\
+program can be used to feed a data analysis pipleline.\n\
 \n\
 The input files must have identical frequency ranges and sample\n\
 spacings, identical time sample spacings, and cannot overlap in time,\n\

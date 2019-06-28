@@ -64,7 +64,7 @@ one downsamples by a factor _LEN_.\n\
 \n\
 A running median is more effective at removing outliers, but is\n\
 slower: see lfmed(1).  The algorithm used by this program can compute\n\
-a running median in order _N_ operations, where _N_ is the number of\n\
+a running mean in order _N_ operations, where _N_ is the number of\n\
 data points.\n\
 \n\
 ## OPTIONS\n\

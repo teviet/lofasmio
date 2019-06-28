@@ -1,6 +1,6 @@
 static const char *version = "\
 lfsquish version " VERSION "\n\
-Copyright (c) 2016 Teviet Creighton.\n\
+Copyright (c) 2019 Teviet Creighton.\n\
 \n\
 This program is free software: you can redistribute it and/or modify\n\
 it under the terms of the GNU General Public License as published by\n\
@@ -46,7 +46,9 @@ static const char *description = "\
 This program averages and resamples a lofasm-filterbank(5) file\n\
 _INFILE_, writing the result to _OUTFILE_.  If _INFILE_ or _OUTFILE_\n\
 is not specified, or is a single `-` character, then standard input or\n\
-standard output is used instead.\n\
+standard output is used instead.  This program streams its input and\n\
+output one row at a time, so it is suitable for use within a pipeline\n\
+(e.g. being fed data by lfcat(1) or other programs).\n\
 \n\
 If run without options, the program will perform the uninteresting\n\
 task of copying _INFILE_ to _OUTFILE_.  At least one of the `-t,\n\
@@ -57,7 +59,7 @@ frequency axes, respectively, but the program will also work on other\n\
 \n\
 Each dimension is downsampled by an integer factor, _FAC1_ or _FAC2_\n\
 respectively.  That is, the input array is sliced into rectangular\n\
-boxes of size _FAC1_x_FAC2_, and the average of each box is recorded\n\
+boxes of size *FAC1*x*FAC2*, and the average of each box is recorded\n\
 as a point in the output array.  Any incomplete boxes are discarded:\n\
 thus the dimensions of the output array are divided by the\n\
 corresponding factor, rounded down.  An error is returned if this\n\
