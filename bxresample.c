@@ -18,7 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.\n\
 
 static const char *usage = "\
 Usage: %s [OPTION]... DIM1[+DIM2[+...]] [INFILE [OUTFILE]]\n\
-Rescale dimensions of an ABX or BBX file.\n\
+DEPRECATED: Rescale dimensions of an ABX or BBX file.\n\
 \n\
   -h, --help             print this usage information\n\
   -H, --man              display the program's man page\n\
@@ -26,6 +26,9 @@ Rescale dimensions of an ABX or BBX file.\n\
       --markdown         print the program's man page (markdown)\n\
   -V, --version          print program version\n\
   -v, --verbosity=LEVEL  set status message reporting level\n\
+\n\
+This program is not currently supported.  In most cases you will\n\
+probably want to use lfsquish.\n\
 \n";
 
 static const char *description = "\
@@ -40,6 +43,9 @@ static const char *description = "\
 `bxresample` [_OPTION_]... _DIMS_ [_INFILE_ [_OUTFILE_]]\n\
 \n\
 ## DESCRIPTION\n\
+\n\
+Use of this program is **deprecated**, you probably want lfsquish(1)\n\
+instead.\n\
 \n\
 This program resamples an abx(5) or bbx(5) file to give it a specified\n\
 number of samples in each dimension.  The final dimensions lengths are\n\
@@ -110,6 +116,7 @@ incorrect syntax, or 4 on memory errors\n\
 \n\
 ## SEE ALSO\n\
 \n\
+lfsquish(1),\n\
 bxRead(3),\n\
 bxWrite(3),\n\
 abx(5),\n\
@@ -263,7 +270,8 @@ main( int argc, char **argv )
     dimout[i] = ( d <= 0.0 ? 0 :
 		  ( (int64_t)( d ) > INT64_MAX ? -1 : (int64_t)( d ) ) );
     if ( b == a )
-      break;
+      dimout[i] = dimin[i];
+      //break;
     if ( dimout[i] <= 0 ) {
       if ( dimout[i] == 0 )
 	lf_error( "dimension %d in %s gives non-positive output dimension",
@@ -283,10 +291,14 @@ main( int argc, char **argv )
     a = b;
   }
 
+  for ( i = 0; i < dimc; i++ )
+    fprintf( stderr, "%li ", dimout[i] );
+  fprintf( stderr, "\n" );
+
   /* Compute bytes in each sample unit. */
   ndim = i;
   nsamp = 1;
-  for ( ; i < dimc; i++, nsamp *= ( dimout[i] = dimin[i] ) )
+  for ( ; i < dimc; i++, nsamp *= dimout[i] )
     if ( nsamp > INT64_MAX/dimin[i] )
       break;
   if ( i < dimc || nsamp%8 ) {

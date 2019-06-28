@@ -46,7 +46,7 @@ OBJS = lofasmIO.o
 ALLOBJS = markdown_peg.o markdown_parser.o charvector.o $(OBJS)
 LIBS = liblofasmio.a($(OBJS))
 PROGS = lfslice lfchop lfcat lftest bxresample lftype lfplot2d lfstats \
-	lfmed lfmean lfplot
+	lfmed lfmean lfplot lfsquish
 ALLPROGS = md2man $(PROGS)
 DISTFILES = Makefile README.md INSTALL.md CONTRIBUTING.md COPYING.md LICENSE \
 	VERSION formats.md $(ALLHEADERS) $(ALLOBJS:.o=.c) $(ALLPROGS:=.c)
@@ -68,13 +68,13 @@ man: $(DISTFILES) PROVIDES.md
 	for file in $(PROGS); do ./$$file --manpage > doc/$$file.1; done
 PROVIDES.md: $(PROGS) $(HEADERS) $(OBJS:.o=.c)
 	-rm PROVIDES.md
-	echo -e "### Programs:\n" >> PROVIDES.md
+	echo "### Programs:\n" >> PROVIDES.md
 	for file in $(PROGS); \
 		do ./$$file --markdown | \
 		awk 'c&&!--c{print $$0 "  "};/^## NAME/{c=2}' \
 			>> PROVIDES.md; done
 	for file in $(HEADERS) $(OBJS:.o=.c); \
-		do echo -e "\n### From " $$file":\n" \
+		do echo "\n### From " $$file":\n" \
 			>> PROVIDES.md; \
 		awk '/^<\/MARKDOWN>/{f=0};f&&c&&!--c{print $$0 "  "};/^## NAME/{f&&c=2};/^<MARKDOWN>/{f=1}' $$file \
 			>> PROVIDES.md; done
@@ -93,7 +93,7 @@ else
 	./lfplot2d -v3 -x 704 -y 600 -c hot -l 1e3 -s 1e-3 -p - testplot.eps
 	rm testplot.bbx $(DATAUNZIP)
 endif
-	@echo -e "\x1b[32;1mSUCCESS:\x1b[0m output in testplot.eps"
+	@printf "\e[32;1mSUCCESS:\e[0m output in testplot.eps\n"
 
 # Install or uninstall files in common directories.  The install
 # target also writes the .uninstall script.
