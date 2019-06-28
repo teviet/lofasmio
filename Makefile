@@ -13,7 +13,7 @@
 # standard location, or if your system does not have the funopen C
 # function in stdio.h (used to transparently access zlib functions).
 
-ZLIB = no
+ZLIB = yes
 
 # The installation prefix, and, optionally, the individual install
 # directories, are set by the following variables.
