@@ -20,14 +20,14 @@ static const char *usage = "\
 Usage: %s [OPTION]... [INFILE [OUTFILE]]\n\
 Reduce the time or frequency resolution of a LoFASM file.\n\
 \n\
-  -h, --help             print this usage information\n\
-  -H, --man              display the program's man page\n\
-      --manpage          print the program's man page (groff)\n\
-      --markdown         print the program's man page (markdown)\n\
-  -V, --version          print program version\n\
-  -v, --verbosity=LEVEL  set status message reporting level\n\
-  -t, --dim1=FAC1        downsampling factor in dimension 1\n\
-  -f, --dim2=FAC2        downsampling factor in dimension 2\n\
+  -h, --help               print this usage information\n\
+  -H, --man                display the program's man page\n\
+      --manpage            print the program's man page (groff)\n\
+      --markdown           print the program's man page (markdown)\n\
+  -V, --version            print program version\n\
+  -v, --verbosity=LEVEL    set status message reporting level\n\
+  -t, --dim1=FAC1[+OFF1]  downsampling factor, offset in dimension 1\n\
+  -f, --dim2=FAC2[+OFF2]  downsampling factor, offset in dimension 2\n\
 \n";
 
 static const char *description = "\
@@ -91,21 +91,29 @@ rather uninteresting task of copying _INFILE_ to _OUTFILE_ unchanged.\n\
     (verbose, errors and warnings), or `3` (very verbose, errors,\n\
     warnings, and extra information).\n\
 \n\
-`-t, --dim1=`_FAC1_:\n\
-`-f, --dim2=`_FAC2_:\n\
+`-t, --dim1=`_FAC1_[`+`_OFF1_]:\n\
+`-f, --dim2=`_FAC2_[`+`_OFF2_]:\n\
     Sets the downsampling factor for the dimension 1 and 2 axes (time\n\
     and frequency, respectively, for standard LoFASM spectrograms).\n\
-    _FAC1_ and _FAC2_ must be positive integers, respectively, and may\n\
-    not exceed the length of their respective axes, else an error\n\
-    occurs.  A value of 1 leaves the sampling unchanged.\n\
+    _FAC1_ and _FAC2_ must be positive integers, and may not exceed\n\
+    the length of their respective axes, else an error occurs.  A\n\
+    value of 1 leaves the sampling unchanged.\n\
 \n\
-    Alternatively, either or both of _FAC1_ or _FAC2_ may be preceded\n\
-    by a slash, `/`_N_, which sets the number of output samples in the\n\
-    corresponding dimension (rather than the downsampling factor).\n\
-    The downsampling factor is set to the corresponding dimension\n\
-    length divided by _N_, rounded down.  As above, _N_ must be a\n\
-    positive integer and may not exceed the length of the\n\
-    corresponding axis.\n\
+    Alternatively, either or both of _FAC1_ and _FAC2_ may take the\n\
+    form `/`_N_ (i.e. preceding the integer argument with a slash),\n\
+    which then specifies the number of output samples in the\n\
+    corresponding dimension.  The downsampling factor is set to the\n\
+    corresponding dimension length divided by _N_, rounded down.  As\n\
+    above, _N_ must be a positive integer and may not exceed the\n\
+    length of the corresponding axis.\n\
+\n\
+    Optionally, a second integer _OFF1_ and/or _OFF2_ may be specified\n\
+    in the option argument (conventionally delimited by a `+` sign).\n\
+    If present, this gives a sampling offset: i.e. a number of samples\n\
+    to skip from the beginning of dimension 1 or 2 before starting the\n\
+    resampling.  If not given, `0` is assumed: it cannot be negative,\n\
+    and the sum of the sampling factor and offset cannot exceed the\n\
+    dimension length.\n\
 \n\
 ## EXIT STATUS\n\
 \n\
@@ -146,10 +154,12 @@ main( int argc, char **argv )
   int lopt;               /* long option index */
   unsigned long long fac[2] = {}; /* downsample factor along dimensions */
   unsigned long long npt[2] = {}; /* specified points along dimensions */
+  unsigned long long off[2] = {}; /* offset in each dimension */
   char *infile, *outfile; /* input/output file names */
   FILE *fpin, *fpout;     /* input/output file pointers */
   int64_t lin, lout, nin; /* input/output row lengths, input samples */
   int64_t i, j, k, n;     /* indecies */
+  int d;                  /* dimension index */
   lfb_hdr head = {};      /* file header */
   double *in, *out;       /* input block and output row */
 
@@ -175,39 +185,21 @@ main( int argc, char **argv )
     case 'v':
       lofasm_verbosity = atoi( optarg );
       break;
-    case 't':
+    case 't': case 'f':
+      d = ( opt == 't' ? 0 : 1 );
       if ( optarg[0] == '/' )
-	i = strtoull( optarg + 1, NULL, 10 );
+	n = sscanf( optarg, "/%lld%lld", fac + d, off + d );
       else
-	i = strtoull( optarg, NULL, 10 );
-      if ( i < 1 || i > INT64_MAX ) {
-	lf_error( "bad -t, --dim1 argument %s", optarg );
+	n = sscanf( optarg, "%lld%lld", fac + d, off + d );
+      if ( fac[d] < 1 || fac[d] > INT64_MAX ) {
+	lf_error( "bad -%c, --dim%1i argument %s", opt, d + 1, optarg );
 	return 1;
       }
       if ( optarg[0] == '/' ) {
-	npt[0] = i;
-	fac[0] = 0;
-      } else {
-	npt[0] = 0;
-	fac[0] = i;
-      }
-      break;
-    case 'f':
-      if ( optarg[0] == '/' )
-	i = strtoull( optarg + 1, NULL, 10 );
-      else
-	i = strtoull( optarg, NULL, 10 );
-      if ( i < 1 || i > INT64_MAX ) {
-	lf_error( "bad -f, --dim2 argument %s", optarg );
-	return 1;
-      }
-      if ( optarg[0] == '/' ) {
-	npt[1] = i;
-	fac[1] = 0;
-      } else {
-	npt[1] = 0;
-	fac[1] = i;
-      }
+	npt[d] = fac[d];
+	fac[d] = 0;
+      } else
+	npt[d] = 0;
       break;
     case '?':
       if ( optopt )
@@ -281,16 +273,16 @@ main( int argc, char **argv )
     if ( npt[i] < 1 ) {
       if ( fac[i] < 1 )
 	fac[i] = 1;
-      if ( ( npt[i] = head.dims[i]/fac[i] ) < 1 ) {
-	lf_error( "dim%1li downsampling factor %lli exceeds length %li",
-		  i, fac[i], head.dims[i] );
+      if ( ( npt[i] = ( head.dims[i] - off[i] )/fac[i] ) < 1 ) {
+	lf_error( "dim%1li offset %lli + factor %lli exceeds length %li",
+		  i, off[i], fac[i], head.dims[i] );
 	fclose( fpin );
 	lfbxFree( &head );
 	return 1;
       }
-    } else if ( ( fac[i] = head.dims[i]/npt[i] ) < 1 ) {
-      lf_error( "dim%1li specified points %lli exceeds length %li",
-		i, npt[i], head.dims[i] );
+    } else if ( ( fac[i] = ( head.dims[i] - off[i] )/npt[i] ) < 1 ) {
+      lf_error( "dim%1li points %lli + offset %lli exceeds length %li",
+		i, npt[i], off[i], head.dims[i] );
       fclose( fpin );
       lfbxFree( &head );
       return 1;
@@ -348,6 +340,13 @@ main( int argc, char **argv )
     return 2;
   }
 
+  /* Skip off[0] input rows. */
+  for ( n = 0; n < off[0] && !feof( fpin ); n++ )
+    if ( ( j = fread( in, sizeof(double), lin, fpin ) ) < lin )
+      lf_warning( "read %lld data from %s, expected %lld",
+		  (long long)( n*lin + j ), infile,
+		  (long long)( nin*lin ) );
+
   /* Generate output row-by-row. */
   for ( i = 0; i < npt[0] && !feof( fpin ); i++ ) {
 
@@ -358,21 +357,24 @@ main( int argc, char **argv )
 	lf_warning( "read %lld data from %s, expected %lld",
 		    (long long)( i*fac[0]*lin + n*lin + j ), infile,
 		    (long long)( nin*lin ) );
-      for ( k = 0; k < j; k++ )
+      for ( k = off[1]; k < j; k++ )
 	out[k] += in[k];
     }
     if ( n < fac[0] )
       lf_warning( "read %lld data from %s, expected %lld",
 		  (long long)( i*fac[0]*lin + n*lin ), infile,
 		  (long long)( nin*lin ) );
-    for ( k = 0; k < lin; k++ )
+    for ( k = off[1]; k < lin; k++ )
       out[k] /= fac[0];
 
     /* Resample in place along dim2. */
     for ( j = 0; j < npt[1]; j++ ) {
+      for ( k = 0; k < head.dims[2]; k++ )
+	out[k] = out[head.dims[2]*off[1] + k];
       for ( n = 1; n < fac[1]; n++ ) {
 	for ( k = 0; k < head.dims[2]; k++ )
-	  out[head.dims[2]*j+k] += out[head.dims[2]*( j*fac[1] + n ) + k];
+	  out[head.dims[2]*j+k] +=
+	    out[head.dims[2]*( j*fac[1] + n + off[1] ) + k];
       }
     }
     for ( j = 0; j < lout; j++ )
