@@ -1268,13 +1268,13 @@ standard data type up to double-precision floats.
 
 ## RETURN VALUE
 
-The function returns 0 normally; 1 (and issues a *warning*) if a
-required or expected header field is missing; 2 (and issues an
-*error*) if the routine could not parse the array dimensions or
-encoding, or allocate `*`_data_ (if requested); 3 (and issues an
-*error*) if _fp_ or _header_ is NULL, or if `*`_data_ is passed as
-non-NULL.  On error, a partially-filled header may be returned, to
-allow for higher-level diagnostics.
+The function returns 0 normally, but may issue a *warning* if a
+required or expected header field is missing.  It returns nonzero, and
+issues an *error*, if the routine could not parse the array dimensions
+or encoding, or allocate `*`_data_ (if requested), or if _fp_ or
+_header_ is NULL, or if `*`_data_ is passed as non-NULL.  On error, a
+partially-filled header may be returned, to allow for higher-level
+diagnostics.
 
 ## SEE ALSO
 
@@ -1495,7 +1495,7 @@ lfbxRead( FILE *fp, lfb_hdr *header, void **data )
   }
 
   /* Finished. */
-  return warn;
+  return 0;
 }
 
 /*
@@ -1539,10 +1539,10 @@ appropriately set to NULL or NaN.
 
 ## RETURN VALUE
 
-The function returns 0 normally; 1 (and issues a *warning*) if a
+The function returns 0 normally, but may issue a *warning* if a
 required or expected header field is missing or set to an unexpected
-value; 2 (and issues an *error*) if a write operation failed; 3 (and
-issues an *error*) if _fp_ or _header_ is NULL, or if _data_`->dims`
+value.  It returns nonzero, and issues an *error*, if a write
+operation failed, if _fp_ or _header_ is NULL, or if _data_`->dims`
 does not specify a positive length of data.
 
 ## SEE ALSO
@@ -1680,7 +1680,7 @@ lfbxWrite( FILE *fp, lfb_hdr *header, void *data )
     lf_error( "write error" );
     return 2;
   }
-  return warn;
+  return 0;
 }
 
 /*
