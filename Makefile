@@ -31,8 +31,8 @@ MANDIR = $(PREFIX)/share/man
 VERSION = `cat VERSION`
 LFB_VERSION = `version=\`cat VERSION\`;echo $${version%%.*}`
 CC = gcc
-LDLIBS = -lm
-CFLAGS = -g -Wall -O3 -DVERSION="\"$(VERSION)\"" -DLFB_VERSION=$(LFB_VERSION)
+LDLIBS = -lm -lbsd
+CFLAGS = -g -Wall -O2 -DVERSION="\"$(VERSION)\"" -DLFB_VERSION=$(LFB_VERSION) 
 ifeq ($(ZLIB),yes)
 LDLIBS += -lz
 else
@@ -46,7 +46,7 @@ OBJS = lofasmIO.o
 ALLOBJS = markdown_peg.o markdown_parser.o charvector.o $(OBJS)
 LIBS = liblofasmio.a($(OBJS))
 PROGS = lfslice lfchop lfcat lftest bxresample lftype lfplot2d lfstats \
-	lfmed lfmean lfplot lfsquish
+	lfmed lfmean lfplot lfsquish lfcoadd lf2fil
 ALLPROGS = md2man $(PROGS)
 DISTFILES = Makefile README.md INSTALL.md CONTRIBUTING.md COPYING.md LICENSE \
 	VERSION formats.md $(ALLHEADERS) $(ALLOBJS:.o=.c) $(ALLPROGS:=.c)
@@ -59,6 +59,7 @@ all: $(ALLPROGS) $(LIBS)
 $(ALLPROGS): $(ALLOBJS)
 $(ALLOBJS): $(ALLHEADERS)
 lib: $(LIBS)
+lf2fil : $(ALLOBJS) sigproc.o
 
 # A more elaborate rule for the package to generate its own documentation.
 man: $(DISTFILES) PROVIDES.md
