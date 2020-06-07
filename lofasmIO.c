@@ -23,7 +23,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ***********************************************************************/
 
-#include <stdio.h>
+#include <bsd/stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
@@ -241,7 +241,9 @@ typedef struct tagstrlist_t {
 /* This macro evaluates to the numerical value of the hexadecimal
    digit.  The digit must be a character in the range '0' to '9', 'a'
    to 'f', or 'A' to 'F'; the macro evaluates to -1 if this is not the
-   case. */
+   case. 
+SB: Length of header isn't fixed. :/  header struct imposes a size of a float (4 bytes) meaning one hex character but there is a loop in the version parser which assumes the version is 8 hex characters long. 
+   */
 #define HEXVAL( digit ) \
 ( ( (digit) >= '0' && (digit) <= '9' ) ? (digit) - '0' : \
   ( ( (digit) >= 'a' && (digit) <= 'f' ) ? 10 + (digit) - 'a' : \
@@ -1350,6 +1352,8 @@ lfbxRead( FILE *fp, lfb_hdr *header, void **data )
       err = dupstr( &( header->data_type ), tail );
 
     /* Numerical fields. */
+    else if ( ( tail = keyval( line + 1, "start_mjd" ) ) )
+      header->start_mjd = atof( tail );
     else if ( ( tail = keyval( line + 1, "dim1_start" ) ) )
       header->dim1_start = atof( tail );
     else if ( ( tail = keyval( line + 1, "dim1_span" ) ) )
@@ -1366,21 +1370,19 @@ lfbxRead( FILE *fp, lfb_hdr *header, void **data )
     /* Version field. */
     else if ( ( tail = keyval( line + 1, "hdr_version" ) ) ) {
       unsigned char b[4]; /* version as byte array */
-      float f[1];         /* version as float */
+      float f;         /* version as float */
       char *c = tail;     /* position in value string */
       while ( isspace( *c ) )
 	c++;
-      for ( i = 0; i < 4; i++, c += 2 )
-	b[i] = (unsigned char)( 16*HEXVAL( c[0] ) + HEXVAL( c[1] ) );
-      memcpy( f, b, 4 );
-      if ( *f < 1.0 || *f > 255.0 || *f != floor( *f ) ) {
+						f = atof (c);
+      if ( f < 1.0 || f > 255.0 || f != floor( f ) ) {
 	lf_warning( "file has wrong endianness" );
 	warn = 1;
       } else {
-	header->hdr_version = *f;
-	if ( *f != LFB_VERSION ) {
+	header->hdr_version = f;
+	if ( f != LFB_VERSION ) {
 	  lf_warning( "reading version %.0f file with version %d"
-		      " library", *f, LFB_VERSION );
+		      " library", f, LFB_VERSION );
 	  warn = 1;
 	}
       }
@@ -1580,6 +1582,7 @@ lfbxWrite( FILE *fp, lfb_hdr *header, void *data )
   /* Check required fields. */
   if ( !header->hdr_type || !header->station || !header->channel ||
        !header->data_type || isnan( header->hdr_version ) ||
+       isnan( header->start_mjd )  ||
        isnan( header->dim1_start ) || isnan( header->dim1_span ) ||
        isnan( header->dim2_start ) || isnan( header->dim2_span ) ) {
     lf_warning( "required metadata missing" );
@@ -1603,8 +1606,6 @@ lfbxWrite( FILE *fp, lfb_hdr *header, void *data )
   if ( !err && header->hdr_type )
     err = ( fprintf( fp, "%%hdr_type: %s\n", header->hdr_type ) < 1 );
   if ( !err && !isnan( header->hdr_version ) ) {
-    unsigned char b[4];            /* version as byte array */
-    char version[9] = {};          /* version as string */
     float f = header->hdr_version; /* version as float */
     if ( f < 1.0 || f > 255.0 || f != floor( f ) ) {
       lf_warning( "header version has wrong endianness" );
@@ -1614,14 +1615,7 @@ lfbxWrite( FILE *fp, lfb_hdr *header, void *data )
 		  " library", f, LFB_VERSION );
       warn = 1;
     }
-    memcpy( b, &f, 4 );
-    for ( i = 0; i < 4; i++ ) {
-      int digit = b[i]/16;
-      version[2*i] = ( digit < 10 ? '0' + digit : 'A' + ( digit - 10 ) );
-      digit = b[i]%16;
-      version[2*i+1] = ( digit < 10 ? '0' + digit : 'A' + ( digit - 10 ) );
-    }
-    err = ( fprintf( fp, "%%hdr_version: %s\n", version ) < 1 );
+    err = ( fprintf( fp, "%%hdr_version: %.0f\n", f) < 1 );
   }
   if ( !err && header->station )
     err = ( fprintf( fp, "%%station: %s\n", header->station ) < 1 );
@@ -1643,6 +1637,8 @@ lfbxWrite( FILE *fp, lfb_hdr *header, void *data )
       err = ( fprintf( fp, "%%frequency_offset_DC: %.16e (Hz)\n",
 		       header->frequency_offset_DC ) < 1 );
   }
+  if ( !err && header->start_mjd )
+    err = ( fprintf( fp, "%%start_mjd: %.16e\n", header->start_mjd ) < 1 );
   if ( !err && header->dim1_label )
     err = ( fprintf( fp, "%%dim1_label: %s\n", header->dim1_label ) < 1 );
   if ( !err && !isnan( header->dim1_start ) )
