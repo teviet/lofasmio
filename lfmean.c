@@ -141,8 +141,7 @@ static const struct option long_opts[] = {
 int
 main( int argc, char **argv )
 {
-  char opt;                /* option character */
-  int lopt;                /* long option index */
+  int opt, lopt;           /* option character and index */
   unsigned long long l1 = 1, l2 = 1; /* filter length along each dimension */
   char *infile, *outfile;  /* input/output file names */
   FILE *fpin, *fpout;      /* input/output file pointers */

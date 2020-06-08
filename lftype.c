@@ -211,8 +211,7 @@ static const char *typekey = "data_type:";
 int
 main( int argc, char **argv )
 {
-  char opt;                   /* short option character */
-  int lopt;                   /* long option index */
+  int opt, lopt;              /* option character and index */
   char *infile, *outfile;     /* input/output filenames */
   char intype[7], outtype[7]; /* input/output data types */
   FILE *fpin, *fpout;         /* input/output file pointers */

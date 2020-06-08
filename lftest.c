@@ -107,8 +107,7 @@ static const struct option long_opts[] = {
 int
 main( int argc, char *argv[] )
 {
-  char opt;           /* short option character */
-  int lopt;           /* long option index */
+  int opt, lopt;      /* option character and index */
   FILE *fpin, *fpout = NULL; /* input and output file pointers */
   char *infile = NULL, *outfile = NULL; /* input and outpit filenames */
   const char *prefix = "magnitude of "; /* modification to data label */

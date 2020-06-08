@@ -159,8 +159,7 @@ combi( int n, int k )
 int
 main( int argc, char **argv )
 {
-  char opt;                 /* short option character */
-  int lopt;                 /* long option index */
+  int opt, lopt;            /* option character and index */
   char *percent = NULL;     /* list of percentiles */
   char *a, *b;              /* pointers witin percent */
   int moments = 2;          /* highest-order moment */

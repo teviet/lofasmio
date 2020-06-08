@@ -231,8 +231,7 @@ do { \
 int
 main( int argc, char **argv )
 {
-  char opt;                   /* short option character */
-  int lopt;                   /* long option index */
+  int opt, lopt;              /* option character and index */
   float awarn = 2, aerr = 2;  /* alignment warning/error thresholds */
   int64_t gaps = 0;           /* number of gaps */
   int ignore = 0;             /* whether to ignore timing mismatches */

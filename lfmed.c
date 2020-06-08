@@ -180,8 +180,7 @@ ascend( const void *p1, const void *p2 )
 int
 main( int argc, char **argv )
 {
-  char opt;                /* option character */
-  int lopt;                /* long option index */
+  int opt, lopt;           /* option character and index */
   unsigned long long r1 = 0, r2 = 0; /* width along each dimension */
   char *tail;              /* pointer within option argument */
   char *infile, *outfile;  /* input/output file names */

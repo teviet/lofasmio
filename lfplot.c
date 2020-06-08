@@ -32,10 +32,11 @@ Plot one or more rows or columns of a LoFASM data.\n\
   -z, --component=COMP   convert complex to real\n\
   -s, --lin=SCALE[+OFF]  convert on a linear scale\n\
   -l, --log=BASE         convert to log scale\n\
+  -r, --range=MIN[+MAX]  restrict range of data\n\
 \n";
 
 static const char *description = "\
-# lfplot2d(1)\n\
+# lfplot(1)\n\
 \n\
 ## NAME\n\
 \n\
@@ -57,7 +58,7 @@ With no options, the program generates a 256x256 plot of the first row\n\
 of _INFILE_.  If the data are complex, then the real and imaginary\n\
 components are plotted in red and blue.  If multiple rows or colums\n\
 are specified, then they are plotted in colours ranging continuously\n\
-from red to brown to dark green to cark cyan to blue, with real and\n\
+from red to brown to dark green to dark cyan to blue, with real and\n\
 imaginary components having the same colour.  The `-z, --component`\n\
 option can convert complex data to real for plotting.\n\
 \n\
@@ -129,6 +130,13 @@ option can convert complex data to real for plotting.\n\
     specified by the `-s, --lin` option is done before taking the\n\
     logarithm.\n\
 \n\
+`-r, --range=`_MIN_[+*MAX*]:\n\
+    Truncate the range of the data, The argument consists of a number\n\
+    _MIN_, with an optional second number _MAX_ directly appended with\n\
+    its sign character as a delimiter.  The data are restricted to the\n\
+    range [*MIN*,*MAX*].  This is done before any linear or\n\
+    logarithmic remapping, above.\n\
+\n\
 ## EXIT STATUS\n\
 \n\
 The proram exits with status 0 normally, 1 if there is an error\n\
@@ -149,7 +157,7 @@ lofasm-filterbank(5)\n\
 #include "markdown_parser.h"
 #include "lofasmIO.h"
 
-static const char short_opts[] = ":hHVv:g:d:n:z:l:s:";
+static const char short_opts[] = ":hHVv:g:d:n:z:l:s:r:";
 static const struct option long_opts[] = {
   { "help", 0, 0, 'h' },
   { "man", 0, 0, 'H' },
@@ -163,6 +171,7 @@ static const struct option long_opts[] = {
   { "components", 1, 0, 'z' },
   { "log", 1, 0, 'l' },
   { "lin", 1, 0, 's' },
+  { "range", 1, 0, 'r' },
   { 0, 0, 0, 0} };
 
 #define LEN 1024 /* character buffer size */
@@ -170,8 +179,7 @@ static const struct option long_opts[] = {
 int
 main( int argc, char **argv )
 {
-  char opt;                      /* option character */
-  int lopt;                      /* long option index */
+  int opt, lopt;                 /* option character and index */
   char *infile, *outfile;        /* input/output filenames */
   FILE *fpin, *fpout;            /* input/output file objects */
   double *dat = NULL;            /* block of data read */
@@ -181,6 +189,8 @@ main( int argc, char **argv )
   char *zarg = "";               /* -z option */
   double scale = 1.0, off = 0.0; /* -s option */
   double base = 0.0;             /* -l option */
+  double min, max;               /* -r option */
+  int range = 0;                 /* -r flag */
   lfb_hdr head = {};             /* lofasm header */
   int64_t i, j, jnext, k, n;     /* indecies and number of data read */
   int64_t stride;                /* spacing between data */
@@ -253,6 +263,12 @@ main( int argc, char **argv )
 	return 1;
       }
       base = 1.0/log( base );
+      break;
+    case 'r':
+      if ( ( range = sscanf( optarg, "%lf%lf", &min, &max ) ) < 1 ) {
+	lf_error( "bad argument %s to -r, --range", optarg );
+	return 1;
+      }
       break;
     case '?':
       if ( optopt )
@@ -446,6 +462,10 @@ main( int argc, char **argv )
       if ( isnan( d ) || isinf( d ) )
 	first = 1;
       else {
+	if ( range > 0 && !( d > min ) )
+	  d = min;
+	if ( range > 0 && !( d < max ) )
+	  d = max;
 	if ( scale != 1.0 || off != 0.0 )
 	  d = scale*d + off;
 	if ( base != 0.0 )

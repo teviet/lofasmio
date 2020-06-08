@@ -31,6 +31,7 @@ Make a two-dimensional colour plot of LoFASM data.\n\
   -z, --component=COMP   convert complex to real\n\
   -s, --lin=SCALE[+OFF]  convert on a linear scale\n\
   -l, --log=BASE         convert to log scale\n\
+  -r, --range=MIN[+MAX]  restrict range of data\n\
   -c, --colourmap=MAP    specify colour scale for output\n\
   -p, --postscript       generate PostScript output\n\
 \n";
@@ -138,6 +139,13 @@ viewed with gv(1) and converted with gs(1).\n\
     specified by the `-s, --lin` option is done before taking the\n\
     logarithm.\n\
 \n\
+`-r, --range=`_MIN_[+*MAX*]:\n\
+    Truncate the range of the data, The argument consists of a number\n\
+    _MIN_, with an optional second number _MAX_ directly appended with\n\
+    its sign character as a delimiter.  The data are restricted to the\n\
+    range [*MIN*,*MAX*].  This is done before any linear or\n\
+    logarithmic remapping, above.\n\
+\n\
 `-c, --colourmap=`_MAP_:\n\
     Specifies a colourmap for representing data levels.  _MAP_ may be\n\
     either a named colourmap; a colourmap array (see below); or the\n\
@@ -199,7 +207,7 @@ lofasm-filterbank(5)\n\
 #include "markdown_parser.h"
 #include "lofasmIO.h"
 
-static const char short_opts[] = ":hHVv:y:x:z:l:s:c:p";
+static const char short_opts[] = ":hHVv:y:x:z:l:s:r:c:p";
 static const struct option long_opts[] = {
   { "help", 0, 0, 'h' },
   { "man", 0, 0, 'H' },
@@ -212,6 +220,7 @@ static const struct option long_opts[] = {
   { "components", 1, 0, 'z' },
   { "log", 1, 0, 'l' },
   { "lin", 1, 0, 's' },
+  { "range", 1, 0, 'r' },
   { "colourmap", 1, 0, 'c' },
   { "postscript", 0, 0, 'p' },
   { 0, 0, 0, 0} };
@@ -230,8 +239,7 @@ static char *colour_maps[] = {
 int
 main( int argc, char **argv )
 {
-  char opt;                           /* option character */
-  int lopt;                           /* long option index */
+  int opt, lopt;                      /* option character and index */
   char *infile, *outfile;             /* input/output filenames */
   FILE *fpin, *fpout;                 /* input/output file objects */
   double *rowin = NULL;               /* single timestep of data read */
@@ -241,6 +249,8 @@ main( int argc, char **argv )
   char *zarg = "abs", *carg = "gray"; /* -z and -c options */
   double scale = 1.0, off = 0.0;      /* -s option */
   double base = 0.0;                  /* -l option */
+  double min, max;                    /* -r option */
+  int range = 0;                      /* -r flag */
   int ps = 0;                         /* -p flag */
   double *cmap, *cnan;                /* colourmap */
   int clength, csize;                 /* current/allocated length of cmap */
@@ -312,6 +322,12 @@ main( int argc, char **argv )
 	}
       }
       base = 1.0/log( base );
+      break;
+    case 'r':
+      if ( ( range = sscanf( optarg, "%lf%lf", &min, &max ) ) < 1 ) {
+	lf_error( "bad argument %s to -r, --range", optarg );
+	return 1;
+      }
       break;
     case 'c':
       if ( !strcmp( optarg, "?" ) ) {
@@ -655,6 +671,14 @@ main( int argc, char **argv )
 	for ( j = 0; j < head.dims[1]; j++ )
 	  rowdat[2*j] = atan2( rowdat[2*j+1], rowdat[2*j] );
     }
+    if ( range > 0 )
+      for ( j = 0; j < head.dims[1]; j++ )
+	if ( !( rowdat[2*j] > min ) )
+	  rowdat[2*j] = min;
+    if ( range > 1 )
+      for ( j = 0; j < head.dims[1]; j++ )
+	if ( !( rowdat[2*j] < max ) )
+	  rowdat[2*j] = max;
     if ( scale != 1.0 || off != 0.0 )
       for ( j = 0; j < head.dims[1]; j++ )
 	rowdat[2*j] = scale*rowdat[2*j] + off;

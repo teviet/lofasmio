@@ -330,8 +330,7 @@ loadFile( charvector *text, const char *fname )
 int
 main( int argc, char **argv )
 {
-  char opt;             /* short option character */
-  int lopt;             /* long option index */
+  int opt, lopt;        /* option character and index */
   int pre = 0;          /* whether to write preprocessed markdown */
   char *out = NULL;     /* output directory or pipe */
   charvector text = {}; /* input file as variable-length string */

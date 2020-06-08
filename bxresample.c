@@ -142,8 +142,7 @@ static const struct option long_opts[] = {
 int
 main( int argc, char **argv )
 {
-  char opt;               /* short option character */
-  int lopt;               /* long option index */
+  int opt, lopt;          /* option character and index */
   char *infile, *outfile; /* input/output filenames */
   char *dims;             /* resampled dimensions specifier */
   char *a, *b;            /* pointers within dims */

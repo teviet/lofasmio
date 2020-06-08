@@ -150,8 +150,7 @@ static const struct option long_opts[] = {
 int
 main( int argc, char **argv )
 {
-  char opt;               /* option character */
-  int lopt;               /* long option index */
+  int opt, lopt;          /* option character and index */
   unsigned long long fac[2] = {}; /* downsample factor along dimensions */
   unsigned long long npt[2] = {}; /* specified points along dimensions */
   unsigned long long off[2] = {}; /* offset in each dimension */
