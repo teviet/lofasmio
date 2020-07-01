@@ -32,7 +32,7 @@ extern "C" {
 #endif
 #endif
 
-#include <stdio.h>
+#include <bsd/stdio.h>
 #include <stdint.h>
 
 /*
@@ -124,6 +124,7 @@ typedef struct {
   char *start_time;
   double time_offset_J2000;
   double frequency_offset_DC;
+  double start_mjd;
   char *dim1_label;
   double dim1_start;
   double dim1_span;
